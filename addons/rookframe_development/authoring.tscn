@@ -1,0 +1,187 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://addons/rookframe_development/authoring.gd" id="script"]
+
+[node name="Package" type="VBoxContainer"]
+size_flags_horizontal = 3
+script = ExtResource("script")
+
+[node name="NewPackage" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+
+[node name="Title" type="Label" parent="NewPackage"]
+text = "Create a Package in this project"
+autowrap_mode = 2
+
+[node name="NameLabel" type="Label" parent="NewPackage"]
+text = "Package name"
+
+[node name="PackageName" type="LineEdit" parent="NewPackage"]
+unique_name_in_owner = true
+placeholder_text = "My Package"
+
+[node name="KindLabel" type="Label" parent="NewPackage"]
+text = "Package kind"
+
+[node name="PackageKind" type="OptionButton" parent="NewPackage"]
+unique_name_in_owner = true
+item_count = 3
+selected = 0
+popup/item_0/text = "Extension with UI"
+popup/item_0/id = 0
+popup/item_1/text = "Content pack"
+popup/item_1/id = 1
+popup/item_2/text = "System Extension"
+popup/item_2/id = 2
+
+[node name="Initialize" type="Button" parent="NewPackage"]
+unique_name_in_owner = true
+text = "Create Package"
+
+[node name="RegisterEntry" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+
+[node name="PackagePath" type="Label" parent="RegisterEntry"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="InstallDependencies" type="Button" parent="RegisterEntry"]
+unique_name_in_owner = true
+text = "Install authoring dependencies"
+
+[node name="SceneLabel" type="Label" parent="RegisterEntry"]
+text = "Scene or imported model"
+
+[node name="ScenePath" type="LineEdit" parent="RegisterEntry"]
+unique_name_in_owner = true
+placeholder_text = "res://rookframe/packages/…"
+
+[node name="SceneActions" type="HBoxContainer" parent="RegisterEntry"]
+
+[node name="ChooseScene" type="Button" parent="RegisterEntry/SceneActions"]
+unique_name_in_owner = true
+text = "Browse…"
+size_flags_horizontal = 3
+
+[node name="UseScene" type="Button" parent="RegisterEntry/SceneActions"]
+unique_name_in_owner = true
+text = "Use open scene"
+size_flags_horizontal = 3
+
+[node name="NameLabel" type="Label" parent="RegisterEntry"]
+text = "Display name"
+
+[node name="EntryName" type="LineEdit" parent="RegisterEntry"]
+unique_name_in_owner = true
+
+[node name="IdLabel" type="Label" parent="RegisterEntry"]
+text = "Stable entry ID"
+
+[node name="EntryId" type="LineEdit" parent="RegisterEntry"]
+unique_name_in_owner = true
+
+[node name="TypeLabel" type="Label" parent="RegisterEntry"]
+text = "Register as"
+
+[node name="EntryType" type="OptionButton" parent="RegisterEntry"]
+unique_name_in_owner = true
+item_count = 9
+selected = 0
+popup/item_0/text = "Prop"
+popup/item_0/id = 0
+popup/item_1/text = "Wall Style"
+popup/item_1/id = 1
+popup/item_2/text = "Surface Finish"
+popup/item_2/id = 2
+popup/item_3/text = "Miniature"
+popup/item_3/id = 3
+popup/item_4/text = "Window — left rail"
+popup/item_4/id = 4
+popup/item_5/text = "Window — right rail"
+popup/item_5/id = 5
+popup/item_6/text = "Package UI root"
+popup/item_6/id = 6
+popup/item_7/text = "Actor creation"
+popup/item_7/id = 7
+popup/item_8/text = "Selected Rook"
+popup/item_8/id = 8
+
+[node name="PresentationRow" type="VBoxContainer" parent="RegisterEntry"]
+unique_name_in_owner = true
+
+[node name="Label" type="Label" parent="RegisterEntry/PresentationRow"]
+text = "Presentation"
+
+[node name="Presentation" type="OptionButton" parent="RegisterEntry/PresentationRow"]
+unique_name_in_owner = true
+
+[node name="EntryHelp" type="Label" parent="RegisterEntry"]
+unique_name_in_owner = true
+autowrap_mode = 2
+
+[node name="PrepareModel" type="Button" parent="RegisterEntry"]
+unique_name_in_owner = true
+text = "Prepare model scene"
+
+[node name="Register" type="Button" parent="RegisterEntry"]
+unique_name_in_owner = true
+text = "Register scene"
+
+[node name="ReleaseMedia" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+
+[node name="Title" type="Label" parent="ReleaseMedia"]
+text = "Release images and videos"
+
+[node name="Help" type="Label" parent="ReleaseMedia"]
+text = "The cover also supplies the default image for games using this System. Attach PNG, JPEG or WebP images and OGV, MP4 or WebM videos before building your release."
+autowrap_mode = 3
+
+[node name="MediaItems" type="ItemList" parent="ReleaseMedia"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 110)
+
+[node name="MediaCaption" type="LineEdit" parent="ReleaseMedia"]
+unique_name_in_owner = true
+placeholder_text = "Caption for the next attachment (optional)"
+max_length = 200
+
+[node name="AddActions" type="HBoxContainer" parent="ReleaseMedia"]
+
+[node name="ChooseCover" type="Button" parent="ReleaseMedia/AddActions"]
+unique_name_in_owner = true
+text = "Choose cover…"
+
+[node name="AddMedia" type="Button" parent="ReleaseMedia/AddActions"]
+unique_name_in_owner = true
+text = "Add image or video…"
+
+[node name="EditActions" type="HBoxContainer" parent="ReleaseMedia"]
+
+[node name="RemoveMedia" type="Button" parent="ReleaseMedia/EditActions"]
+unique_name_in_owner = true
+text = "Remove"
+
+[node name="MediaUp" type="Button" parent="ReleaseMedia/EditActions"]
+unique_name_in_owner = true
+text = "Move up"
+
+[node name="MediaDown" type="Button" parent="ReleaseMedia/EditActions"]
+unique_name_in_owner = true
+text = "Move down"
+
+[node name="MediaPicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Attach release media"
+access = 2
+file_mode = 0
+
+[node name="AuthorStatus" type="Label" parent="."]
+unique_name_in_owner = true
+autowrap_mode = 2
+focus_mode = 2
+
+[node name="ScenePicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Choose Package scene"
+file_mode = 0
+filters = PackedStringArray("*.tscn,*.glb,*.gltf ; Godot scene or imported model")

@@ -1,0 +1,7 @@
+.godot/
+.plugged/
+addons/gd-plug/
+addons/rookframe_sdk/
+__pycache__/
+*.pyc
+.DS_Store

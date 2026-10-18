@@ -1,0 +1,104 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://addons/rookframe_development/development.gd" id="1"]
+
+[ext_resource type="PackedScene" path="res://addons/rookframe_development/authoring.tscn" id="author"]
+
+[node name="Rookframe" type="EditorDock"]
+title = "Rookframe"
+default_slot = 4
+layout_key = "rookframe_development"
+
+[node name="Tabs" type="TabContainer" parent="."]
+
+[node name="Package" type="ScrollContainer" parent="Tabs"]
+horizontal_scroll_mode = 0
+
+[node name="Package" parent="Tabs/Package" instance=ExtResource("author")]
+size_flags_horizontal = 3
+
+[node name="Development" type="ScrollContainer" parent="Tabs"]
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Tabs/Development"]
+custom_minimum_size = Vector2(270, 0)
+size_flags_horizontal = 3
+script = ExtResource("1")
+
+[node name="Title" type="Label" parent="Tabs/Development/Content"]
+text = "Package development"
+
+[node name="Explanation" type="Label" parent="Tabs/Development/Content"]
+text = "One editable Package. A local World.\nNo network Participants."
+autowrap_mode = 2
+
+[node name="RuntimeLabel" type="Label" parent="Tabs/Development/Content"]
+text = "Development runtime"
+
+[node name="RuntimeRow" type="HBoxContainer" parent="Tabs/Development/Content"]
+
+[node name="Runtime" type="LineEdit" parent="Tabs/Development/Content/RuntimeRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Runtime bundle manifest"
+
+[node name="Browse" type="Button" parent="Tabs/Development/Content/RuntimeRow"]
+unique_name_in_owner = true
+text = "Browse…"
+
+[node name="WorldLabel" type="Label" parent="Tabs/Development/Content"]
+text = "Development World name"
+
+[node name="WorldName" type="LineEdit" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+text = "Package development"
+
+[node name="SystemLabel" type="Label" parent="Tabs/Development/Content"]
+text = "System Manifest URL (optional Packages only)"
+autowrap_mode = 2
+
+[node name="SystemManifest" type="LineEdit" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+placeholder_text = "https://…"
+
+[node name="PackagesLabel" type="Label" parent="Tabs/Development/Content"]
+text = "Other Package Manifest URLs (one per line)"
+autowrap_mode = 2
+
+[node name="Packages" type="TextEdit" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+placeholder_text = "https://…"
+
+[node name="Prepare" type="Button" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+text = "Save and prepare"
+
+[node name="Actions" type="HBoxContainer" parent="Tabs/Development/Content"]
+
+[node name="Run" type="Button" parent="Tabs/Development/Content/Actions"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+text = "Run development World"
+
+[node name="Stop" type="Button" parent="Tabs/Development/Content/Actions"]
+unique_name_in_owner = true
+text = "Stop"
+
+[node name="Status" type="Label" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+text = "Choose the development runtime shipped with your Rookframe installation."
+autowrap_mode = 2
+
+[node name="RuntimePicker" type="FileDialog" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+title = "Choose Rookframe development runtime"
+file_mode = 0
+access = 2
+filters = PackedStringArray("rookframe-development-runtime.json ; Rookframe development runtime")
+
+[node name="Restart" type="ConfirmationDialog" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+title = "Activate development support"
+dialog_text = "Godot reads launch and Game tab settings when the editor opens.\nSave and reopen this editor once to activate them.\nAfter that, Package edits reload in the running World."
+ok_button_text = "Save and reopen editor"

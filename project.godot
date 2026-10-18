@@ -1,0 +1,10 @@
+config_version=5
+
+[application]
+config/name="Rookframe Development Plugin"
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/rookframe_development/plugin.cfg")
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
