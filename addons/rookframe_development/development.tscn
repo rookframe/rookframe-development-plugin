@@ -33,14 +33,14 @@ text = "One editable Package. A local World.\nNo network Participants."
 autowrap_mode = 2
 
 [node name="RuntimeLabel" type="Label" parent="Tabs/Development/Content"]
-text = "Development runtime"
+text = "Rookframe application"
 
 [node name="RuntimeRow" type="HBoxContainer" parent="Tabs/Development/Content"]
 
 [node name="Runtime" type="LineEdit" parent="Tabs/Development/Content/RuntimeRow"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
-placeholder_text = "Runtime bundle manifest"
+placeholder_text = "Installed Rookframe executable"
 
 [node name="Browse" type="Button" parent="Tabs/Development/Content/RuntimeRow"]
 unique_name_in_owner = true
@@ -87,15 +87,15 @@ text = "Stop"
 
 [node name="Status" type="Label" parent="Tabs/Development/Content"]
 unique_name_in_owner = true
-text = "Choose the development runtime shipped with your Rookframe installation."
+text = "Choose your installed Rookframe application."
 autowrap_mode = 2
 
 [node name="RuntimePicker" type="FileDialog" parent="Tabs/Development/Content"]
 unique_name_in_owner = true
-title = "Choose Rookframe development runtime"
+title = "Choose Rookframe application"
 file_mode = 0
 access = 2
-filters = PackedStringArray("rookframe-development-runtime.json ; Rookframe development runtime")
+filters = PackedStringArray()
 
 [node name="Restart" type="ConfirmationDialog" parent="Tabs/Development/Content"]
 unique_name_in_owner = true

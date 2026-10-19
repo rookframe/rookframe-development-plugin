@@ -2,7 +2,6 @@
 extends VBoxContainer
 
 const CONFIG := "res://.rookframe/development.json"
-const RUN_ARGS := "--main-pack .rookframe-development.pck --scene res://rookframe/application/ApplicationRoot.tscn -- --development=res://.rookframe/development.json"
 var _prepared := false
 var _worker: Thread
 var _pending_result: Dictionary = {}
@@ -15,7 +14,8 @@ func _ready() -> void:
 	var settings := EditorInterface.get_editor_settings()
 	_initial_embedding = settings.get_project_metadata("game_view", "embed_on_play", false) and not settings.get_project_metadata("game_view", "make_floating_on_play", true)
 	%Browse.pressed.connect(func(): %RuntimePicker.popup_centered_ratio(0.7))
-	%RuntimePicker.file_selected.connect(func(path: String): %Runtime.text = path)
+	%RuntimePicker.file_selected.connect(_select_application)
+	%Runtime.text_changed.connect(func(path: String): %Runtime.tooltip_text = path)
 	%Prepare.pressed.connect(_prepare)
 	%Run.pressed.connect(_run)
 	%Stop.pressed.connect(EditorInterface.stop_playing_scene)
@@ -23,15 +23,24 @@ func _ready() -> void:
 	if FileAccess.file_exists(CONFIG):
 		var config = JSON.parse_string(FileAccess.get_file_as_string(CONFIG))
 		if config is Dictionary:
-			%Runtime.text = config.get("runtimeBundle", "")
+			_select_application(config.get("rookframe", ""))
 			%WorldName.text = config.get("worldName", "Package development")
 			%SystemManifest.text = config.get("systemManifest", "") if config.get("systemManifest") != null else ""
 			%Packages.text = "\n".join(config.get("packageManifests", []))
 			if DisplayServer.get_name() != "headless":
 				_prepare.call_deferred()
+	if %Runtime.text.is_empty():
+		_select_application(_installed_rookframe())
 	for field in [%Runtime, %WorldName, %SystemManifest]:
 		field.text_changed.connect(func(_value: String): _prepared = false)
 	%Packages.text_changed.connect(func(): _prepared = false)
+
+
+func _select_application(path: String) -> void:
+	%Runtime.text = path
+	%Runtime.tooltip_text = path
+	%Runtime.caret_column = path.length()
+	_prepared = false
 
 
 func can_run() -> bool:
@@ -62,7 +71,7 @@ func _prepare() -> void:
 		system = ""
 	var config := {"schema": "rookframe-development-v1", "worldName": %WorldName.text.strip_edges(),
 		"systemManifest": null if system.is_empty() else system, "packageManifests": links,
-		"developPackage": manifest.id, "sourceManifest": "res://rookframe.json", "runtimeBundle": %Runtime.text.strip_edges()}
+		"developPackage": manifest.id, "sourceManifest": "res://rookframe.json", "rookframe": %Runtime.text.strip_edges()}
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://.rookframe"))
 	var file := FileAccess.open(CONFIG, FileAccess.WRITE)
 	if file == null:
@@ -70,7 +79,7 @@ func _prepare() -> void:
 		return
 	file.store_string(JSON.stringify(config, "\t") + "\n")
 	file.close()
-	%Status.text = "Checking and preparing the compiled runtime…"
+	%Status.text = "Preparing the project with your installed Rookframe…"
 	_set_preparing(true)
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
 	if python.is_empty():
@@ -78,7 +87,7 @@ func _prepare() -> void:
 	var args := PackedStringArray([
 		"-X", "utf8",
 		ProjectSettings.globalize_path("res://addons/rookframe_development/rookframe_development.py"),
-		"--project", ProjectSettings.globalize_path("res://"), "--bundle", config.runtimeBundle,
+		"--project", ProjectSettings.globalize_path("res://"), "--rookframe", config.rookframe,
 		"--godot", OS.get_executable_path(), "--architecture", Engine.get_architecture_name()])
 	var worker := Thread.new()
 	var started := worker.start(func():
@@ -87,7 +96,7 @@ func _prepare() -> void:
 		return {"status": status, "output": "\n".join(output)})
 	if started != OK:
 		_set_preparing(false)
-		%Status.text = "Cannot start runtime preparation: " + error_string(started)
+		%Status.text = "Cannot prepare the project: " + error_string(started)
 		return
 	_worker = worker
 
@@ -110,15 +119,20 @@ func _process(_delta: float) -> void:
 	var settings := EditorInterface.get_editor_settings()
 	settings.set_project_metadata("game_view", "embed_on_play", true)
 	settings.set_project_metadata("game_view", "make_floating_on_play", false)
-	ProjectSettings.set_setting("editor/run/main_run_args", RUN_ARGS)
+	var prepared = JSON.parse_string(result.output)
+	if not prepared is Dictionary or not prepared.has("runArguments"):
+		%Status.text = "Rookframe preparation returned an invalid result."
+		return
+	var run_args: String = prepared.runArguments
+	ProjectSettings.set_setting("editor/run/main_run_args", run_args)
 	if str(ProjectSettings.get_setting("application/run/main_scene", "")) in ["", "res://addons/rookframe_sdk/development_entry.tscn"]:
 		ProjectSettings.set_setting("application/run/main_scene", "res://addons/rookframe_development/development_entry.tscn")
 	var saved := ProjectSettings.save()
 	if saved != OK:
 		%Status.text = "Cannot save project launch settings: " + error_string(saved)
 		return
-	if _initial_args != RUN_ARGS or not _initial_embedding:
-		%Status.text = "Runtime prepared. Reopen this editor once to activate Godot's launch and Game tab settings."
+	if _initial_args != run_args or not _initial_embedding:
+		%Status.text = "Project prepared. Reopen this editor once to activate Godot's launch and Game tab settings."
 		%Restart.popup_centered()
 		return
 	_prepared = true
@@ -148,3 +162,16 @@ func _exit_tree() -> void:
 		# completion for the next frame instead of consuming the same Thread twice.
 		_pending_result = _worker.wait_to_finish()
 		_worker = null
+
+func _installed_rookframe() -> String:
+	var candidates := PackedStringArray([OS.get_environment("ROOKFRAME_APP")])
+	if OS.get_name() == "Windows":
+		candidates.append(OS.get_environment("ProgramFiles").path_join("Rookframe/Rookframe.exe"))
+	elif OS.get_name() == "macOS":
+		candidates.append("/Applications/Rookframe.app/Contents/MacOS/Rookframe")
+	else:
+		candidates.append("/usr/bin/rookframe")
+	for path in candidates:
+		if not path.is_empty() and FileAccess.file_exists(path):
+			return path
+	return ""
