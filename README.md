@@ -10,11 +10,11 @@ Use stock Godot 4.7.2 .NET, Python 3.10+, and the .NET 10 runtime.
 Add the plugin to the project's existing gd-plug dependencies:
 
 ```gdscript
-plug("rookframe/rookframe-development-plugin", {"tag": "v0.1.0", "include": ["addons/rookframe_development"]})
+plug("rookframe/rookframe-development-plugin", {"tag": "v0.2.0-rc.1", "include": ["addons/rookframe_development"]})
 ```
 
 Keep the Package's SDK and UI Kit pins. The plugin uses the installed SDK's
-commands; version 0.1.0 is verified with SDK v0.34.1. Install dependencies using
+commands; version 0.2.0-rc.1 uses SDK v0.36.0-rc.2. Install dependencies using
 the project's normal `godot --headless --script plug.gd install` command.
 Ignore `addons/rookframe_development/` in the Package's source control.
 
@@ -32,7 +32,7 @@ preserving an author-selected main scene.
 
 The **Package** tab can initialize an Extension with UI, Content Pack or System
 Extension in an ordinary Godot project. Creation writes the Package manifest,
-source structure and SDK files through the installed SDK command.
+source structure and references to the installed SDK.
 
 Save scenes and models below `rookframe/packages/<package-id>/`. Choose a scene
 and **Register scene** to add it as content or a UI contribution. **Prepare model
@@ -45,9 +45,9 @@ the author project; the plugin does not contain a second SDK or verifier.
 
 ## Run a Development World
 
-1. Open the author project in the stock Godot .NET editor matching the compiled
-   development runtime's engine, OS and architecture.
-2. Open the **Development** tab. Select `rookframe-development-runtime.json`,
+1. Open the author project in the stock Godot .NET editor matching the installed
+   Rookframe application's engine, OS and architecture.
+2. Open the **Development** tab. Select the installed Rookframe executable,
    the existing World name and published Package Manifest URLs. An editable
    optional Package also needs a published System Manifest URL.
 3. Choose **Save and prepare** and reopen the editor once if requested.
@@ -59,9 +59,9 @@ Implementation entry point and Package selection require a session restart.
 Only the Editable Package bypasses admission. Other Packages use normal public
 HTTPS acquisition. Development Mode disables networking.
 
-Keep `.rookframe/development.json`, `.rookframe/development-runtime.json`,
-`.rookframe-development/`, `.rookframe-development.pck`, `rookframe/development/`,
-`.godot/` and staged `addons/webrtc_native/lib/` files outside source control.
+Keep `.rookframe/development.json`, `.rookframe/installed-application.json`,
+`.rookframe-development/`, `rookframe/development/`,
+`.godot/` and staged `dependencies/webrtc_native/lib/` files outside source control.
 Preparing again repairs a deleted Godot cache.
 
 ## Work on this plugin
@@ -78,8 +78,6 @@ godot --headless --editor --path . --quit-after 30
 
 Use the actual Godot .NET executable path. Open this project in the editor to
 inspect the dock. For World behavior, use the same external author project,
-compiled runtime and saved World throughout the change. Keep SDK dependency
+installed application and saved World throughout the change. Keep SDK dependency
 upgrades explicit and verify before tagging a release; never move released tags.
 
-The initial extraction preserves the editor functionality published in
-Rookframe SDK v0.34.1 (commit `a5bd186733bf260e18bcb04ce9a85642b67c50dc`).

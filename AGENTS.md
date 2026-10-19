@@ -1,8 +1,11 @@
 # Repository boundary
 
 This repository owns the Godot editor plugin and Development World preparation.
-Use the pinned public Rookframe SDK for Package commands and API generation.
-The Rookframe application owns the C# API, admission checks and compiled runtime.
+Use the pinned public Rookframe SDK source and its Package commands. Package
+authors never generate or rebuild the SDK.
+The Rookframe application owns the C# API, Package checks and ordinary application releases.
+Prepare Development Worlds from the installed application; do not require a
+separate development-runtime distribution.
 Keep plugin source and tests here; consuming repositories install a fixed release.
 
 Use stock Godot editor, import and live-edit facilities. A departure requires the

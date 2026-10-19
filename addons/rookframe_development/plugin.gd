@@ -30,7 +30,6 @@ func _enter_tree() -> void:
 	add_tool_menu_item("Rookframe: Check Package", _check)
 	add_tool_menu_item("Rookframe: Build Package", _build_package)
 	if FileAccess.file_exists("res://rookframe.json"):
-		_run("facade")
 		if FileAccess.file_exists("res://.rookframe/development.json"):
 			# Apply project metadata during editor startup, before GameView reads it.
 			var settings := EditorInterface.get_editor_settings()

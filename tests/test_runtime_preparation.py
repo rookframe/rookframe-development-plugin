@@ -9,112 +9,94 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "addons/rookframe_d
 import rookframe_development as development
 
 
-class DevelopmentRuntimeTests(unittest.TestCase):
+class InstalledApplicationTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.project = self.root / "author"
         (self.project / ".rookframe").mkdir(parents=True)
-        self.bundle = self.root / "runtime"
-        (self.bundle / "managed").mkdir(parents=True)
-        (self.bundle / "Rookframe.pck").write_bytes(b"compiled pack")
-        (self.bundle / "managed/Rookframe.dll").write_bytes(b"compiled application")
-        native_name = "libwebrtc_native.windows.template_debug.x86_64.dll" if development.host_platform() == "windows" else (
-            "libwebrtc_native.linux.template_debug.x86_64.so" if development.host_platform() == "linux" else
-            "libwebrtc_native.macos.template_debug.universal.framework/libwebrtc_native.macos.template_debug.universal.dylib")
-        self.native = "native/" + native_name
-        (self.bundle / self.native).parent.mkdir(parents=True)
-        (self.bundle / self.native).write_bytes(b"compiled native extension")
+        self.application = self.root / "Installed Rookframe"
+        self.managed = self.application / "data_Rookframe_windows_x86_64"
+        self.managed.mkdir(parents=True)
+        self.executable = self.application / "Rookframe.exe"
+        self.executable.write_bytes(b"ordinary exported executable")
+        (self.application / "Rookframe.pck").write_bytes(b"ordinary exported pack")
+        (self.managed / "Rookframe.dll").write_bytes(b"ordinary published application")
+        self.native = "libwebrtc_native.windows.template_release.x86_64.dll"
+        (self.application / self.native).write_bytes(b"ordinary native extension")
         self.engine = "4.7.2.stable.mono.official.ed1daf0bf"
-        self.bundle_manifest = {"schema": development.BUNDLE_SCHEMA, "engine": self.engine,
-            "features": [development.REQUIRED_FEATURE],
-            "platform": development.host_platform(), "architecture": "x86_64", "version": "1.0.0", "files": {
-                name: development.digest(self.bundle / name)
-                for name in ["Rookframe.pck", "managed/Rookframe.dll", self.native]}}
-        self.save_bundle()
+        for patcher in [patch.object(development, "host_platform", return_value="windows"),
+                        patch.object(development.subprocess, "check_output", return_value=self.engine)]:
+            patcher.start()
+            self.addCleanup(patcher.stop)
         (self.project / "rookframe.json").write_text(json.dumps({"id": "author", "kind": "system-extension"}))
         (self.project / ".rookframe/development.json").write_text(json.dumps({
             "schema": development.CONFIG_SCHEMA, "worldName": "My World", "developPackage": "author"}))
         (self.project / "my_scene.tscn").write_text("Author scene")
 
-    def save_bundle(self):
-        (self.bundle / "rookframe-development-runtime.json").write_text(json.dumps(self.bundle_manifest))
-
     def prepare(self):
-        return development.prepare(self.project, self.bundle / "rookframe-development-runtime.json", self.engine, "x86_64")
+        return development.prepare(self.project, self.executable, self.engine, "x86_64")
 
-    def test_prepares_actual_project_and_recovers_removed_godot_cache(self):
-        self.assertEqual(self.prepare()["status"], "ready")
-        target = self.project / ".godot/mono/temp/bin/Debug/Rookframe.dll"
+    def test_uses_installed_pack_directly_and_recovers_deleted_library_cache(self):
+        prepared = self.prepare()
+        self.assertIn(json.dumps((self.application / "Rookframe.pck").as_posix()), prepared["runArguments"])
+        self.assertEqual(list(self.project.glob("*.pck")), [])
+        target = self.project / development.MANAGED_ROOT / "Rookframe.dll"
+        self.assertEqual(target.read_bytes(), (self.managed / "Rookframe.dll").read_bytes())
         target.unlink()
         self.prepare()
-        self.assertEqual(target.read_bytes(), b"compiled application")
+        self.assertEqual(target.read_bytes(), b"ordinary published application")
         self.assertEqual((self.project / "my_scene.tscn").read_text(), "Author scene")
 
-    def test_rejects_damaged_bundle_before_changing_a_prepared_runtime(self):
+    def test_incomplete_installation_does_not_modify_prepared_libraries(self):
         self.prepare()
-        (self.bundle / "Rookframe.pck").write_bytes(b"partial update")
-        with self.assertRaisesRegex(ValueError, "Damaged"):
+        (self.application / "Rookframe.pck").unlink()
+        (self.managed / "Rookframe.dll").write_bytes(b"updated")
+        with self.assertRaisesRegex(ValueError, "incomplete"):
             self.prepare()
-        self.assertEqual((self.project / development.PACK).read_bytes(), b"compiled pack")
+        self.assertEqual((self.project / development.MANAGED_ROOT / "Rookframe.dll").read_bytes(), b"ordinary published application")
 
-    def test_requires_exact_stock_mono_engine_host_platform_and_live_declarations(self):
-        for field, wrong in [("engine", "4.7.stable.official"), ("platform", "other-os"), ("architecture", "arm64"), ("features", [])]:
-            old = self.bundle_manifest[field]
-            self.bundle_manifest[field] = wrong
-            self.save_bundle()
-            with self.assertRaises(ValueError):
-                self.prepare()
-            self.assertFalse((self.project / development.PACK).exists())
-            self.bundle_manifest[field] = old
+    def test_requires_matching_stock_mono_editor_and_architecture(self):
+        with self.assertRaisesRegex(ValueError, "ENGINE"):
+            development.prepare(self.project, self.executable, "another-engine", "x86_64")
+        with self.assertRaisesRegex(ValueError, "architecture"):
+            development.prepare(self.project, self.executable, self.engine, "arm64")
+        self.assertFalse((self.project / ".godot").exists())
 
-    def test_rejects_path_escape_and_does_not_overwrite_an_author_pack(self):
-        self.bundle_manifest["files"]["managed/../../escape"] = "any"
-        self.save_bundle()
-        with self.assertRaisesRegex(ValueError, "PATH"):
-            self.prepare()
-        del self.bundle_manifest["files"]["managed/../../escape"]
-        self.save_bundle()
-        (self.project / development.PACK).write_bytes(b"author file")
-        with self.assertRaisesRegex(ValueError, "COLLISION"):
-            self.prepare()
-        self.assertEqual((self.project / development.PACK).read_bytes(), b"author file")
-
-    def test_upgrade_removes_only_obsolete_owned_managed_files(self):
-        (self.bundle / "managed/old.dll").write_bytes(b"old library")
-        self.bundle_manifest["files"]["managed/old.dll"] = development.digest(self.bundle / "managed/old.dll")
-        self.save_bundle()
+    def test_upgrade_removes_only_obsolete_owned_libraries(self):
+        (self.managed / "old.dll").write_bytes(b"old library")
         self.prepare()
-        del self.bundle_manifest["files"]["managed/old.dll"]
-        self.save_bundle()
+        (self.managed / "old.dll").unlink()
         self.prepare()
-        self.assertFalse((self.project / ".godot/mono/temp/bin/Debug/old.dll").exists())
+        self.assertFalse((self.project / development.MANAGED_ROOT / "old.dll").exists())
         self.assertEqual((self.project / "my_scene.tscn").read_text(), "Author scene")
 
     def test_interrupted_preparation_can_be_retried(self):
-        copy = development.atomic_copy
-        def interrupted(source, target):
-            if target.suffix == ".dll":
-                raise OSError("Interrupted managed file copy")
-            copy(source, target)
-        with patch.object(development, "atomic_copy", interrupted):
+        with patch.object(development, "atomic_copy", side_effect=OSError("Interrupted")):
             with self.assertRaises(OSError):
                 self.prepare()
         self.assertEqual(self.prepare()["status"], "ready")
-        self.assertEqual((self.project / ".godot/mono/temp/bin/Debug/Rookframe.dll").read_bytes(), b"compiled application")
 
     def test_native_collision_preserves_author_files(self):
-        target = self.project / "addons/webrtc_native/lib" / self.native.removeprefix("native/")
+        target = self.project / development.NATIVE_ROOT / self.native
         target.parent.mkdir(parents=True)
         target.write_bytes(b"author-owned native file")
         with self.assertRaisesRegex(ValueError, "COLLISION"):
             self.prepare()
         self.assertEqual(target.read_bytes(), b"author-owned native file")
-        self.assertFalse((self.project / development.PACK).exists())
-        target.unlink()
+
+    def test_tampered_ownership_cannot_delete_files_outside_the_project(self):
         self.prepare()
-        self.assertEqual(target.read_bytes(), b"compiled native extension")
+        outside = self.root / "keep.dll"
+        outside.write_bytes(b"keep")
+        record = self.project / ".rookframe/installed-application.json"
+        previous = json.loads(record.read_text())
+        previous["files"].append(development.MANAGED_ROOT + "../../../../../../keep.dll")
+        record.write_text(json.dumps(previous))
+        with self.assertRaisesRegex(ValueError, "PATH"):
+            self.prepare()
+        self.assertEqual(outside.read_bytes(), b"keep")
 
 
 if __name__ == "__main__":

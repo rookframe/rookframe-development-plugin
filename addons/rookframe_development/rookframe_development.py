@@ -1,7 +1,7 @@
-"""Prepare an author's own Godot project to run the compiled development runtime.
+"""Prepare an author's own Godot project to run the installed Rookframe application.
 
 The editor owns watching, importing, debugging, live editing and the Game tab.
-This module only validates and stages the application team's runtime distribution.
+This module only locates the ordinary application and copies its published libraries into Godot's cache.
 """
 from __future__ import annotations
 
@@ -15,13 +15,15 @@ import shutil
 import subprocess
 import tempfile
 
-BUNDLE_SCHEMA = "rookframe-development-runtime-v1"
-REQUIRED_FEATURE = "live-declarations"
 CONFIG_SCHEMA = "rookframe-development-v1"
-PACK = ".rookframe-development.pck"
-NATIVE_ROOT = "addons/webrtc_native/lib/"
-RUN_ARGS = (f"--main-pack {PACK} --scene res://rookframe/application/ApplicationRoot.tscn"
-            " -- --development=res://.rookframe/development.json")
+NATIVE_ROOT = "dependencies/webrtc_native/lib/"
+MANAGED_ROOT = ".godot/mono/temp/bin/Debug/"
+
+
+def run_arguments(pack: Path) -> str:
+    return ("--main-pack " + json.dumps(pack.as_posix(), ensure_ascii=False)
+            + " --scene res://rookframe/application/ApplicationRoot.tscn"
+              " -- --development=res://.rookframe/development.json")
 
 
 def digest(path: Path) -> str:
@@ -38,9 +40,9 @@ def host_platform() -> str:
 
 def native_library(target: str, architecture: str) -> str:
     if target == "macos":
-        return "libwebrtc_native.macos.template_debug.universal.framework"
+        return "libwebrtc_native.macos.template_release.universal.framework"
     suffix = {"windows": "dll", "linux": "so"}[target]
-    return f"libwebrtc_native.{target}.template_debug.{architecture}.{suffix}"
+    return f"libwebrtc_native.{target}.template_release.{architecture}.{suffix}"
 
 
 def member(root: Path, name: str) -> Path:
@@ -66,7 +68,7 @@ def atomic_copy(source: Path, destination: Path) -> None:
         pending.unlink(missing_ok=True)
 
 
-def prepare(project: Path, bundle_path: Path, godot_version: str, architecture: str) -> dict:
+def prepare(project: Path, application: Path, godot_version: str, architecture: str) -> dict:
     project = project.resolve()
     config_path = project / ".rookframe/development.json"
     manifest = json.loads((project / "rookframe.json").read_text(encoding="utf-8"))
@@ -81,68 +83,64 @@ def prepare(project: Path, bundle_path: Path, godot_version: str, architecture: 
         raise ValueError("DEVELOPMENT.SYSTEM: The editable System already supplies this World's System.")
     if list(project.glob("*.csproj")) or list(project.glob("*.sln")):
         raise ValueError("DEVELOPMENT.PROJECT: Use a GDScript Package project without a host C# build project.")
-    bundle_path = bundle_path.resolve()
-    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    if bundle.get("schema") != BUNDLE_SCHEMA or bundle.get("platform") != host_platform():
-        raise ValueError("DEVELOPMENT.RUNTIME: Choose the Rookframe development runtime for this desktop OS.")
-    if REQUIRED_FEATURE not in bundle.get("features", []):
-        raise ValueError("DEVELOPMENT.RUNTIME: Update Rookframe development support; this SDK needs a runtime with live Package declarations.")
-    if bundle.get("engine") != godot_version or ".mono." not in godot_version:
-        raise ValueError(f"DEVELOPMENT.ENGINE: Open this project in stock Godot .NET {bundle.get('engine')}; running {godot_version}.")
-    if bundle.get("architecture") != architecture:
-        raise ValueError(f"DEVELOPMENT.ARCHITECTURE: Choose the {architecture} runtime for this Godot editor.")
-    files = bundle.get("files", {})
-    native = "native/" + native_library(bundle["platform"], architecture)
-    native_binary = native + "/" + Path(native).stem + ".dylib" if bundle["platform"] == "macos" else native
-    if "Rookframe.pck" not in files or "managed/Rookframe.dll" not in files or native_binary not in files:
-        raise ValueError("DEVELOPMENT.RUNTIME: Incomplete runtime bundle; reinstall development support.")
-    ownership = project / ".rookframe/development-runtime.json"
+    application = application.resolve()
+    if application.suffix == ".app":
+        application = application / "Contents/MacOS/Rookframe"
+    if not application.is_file():
+        raise ValueError("DEVELOPMENT.ROOKFRAME: Choose the installed Rookframe application.")
+    version = subprocess.check_output([str(application), "--version"], text=True, timeout=30).strip()
+    if version != godot_version or ".mono." not in godot_version:
+        raise ValueError(f"DEVELOPMENT.ENGINE: Open this project in stock Godot .NET {version}; running {godot_version}.")
+    target = host_platform()
+    resources = application.parent.parent / "Resources" if target == "macos" else application.parent
+    packs = list(resources.glob("*.pck"))
+    platform_id = "linuxbsd" if target == "linux" else target
+    managed = resources / f"data_Rookframe_{platform_id}_{architecture}"
+    native_name = native_library(target, architecture)
+    native_root = application.parent.parent / "Frameworks" if target == "macos" else resources
+    native = native_root / native_name
+    if len(packs) != 1 or not (managed / "Rookframe.dll").is_file() or not native.exists():
+        raise ValueError("DEVELOPMENT.ROOKFRAME: The installed application is incomplete or does not match this editor's architecture.")
+    ownership = project / ".rookframe/installed-application.json"
     previous = json.loads(ownership.read_text(encoding="utf-8")) if ownership.exists() else {}
+    inputs = [(source, MANAGED_ROOT + source.relative_to(managed).as_posix())
+              for source in managed.rglob("*") if source.is_file()]
+    native_files = list(native.rglob("*")) if native.is_dir() else [native]
+    inputs.extend((source, NATIVE_ROOT + source.relative_to(native_root).as_posix())
+                  for source in native_files if source.is_file())
     checked = []
-    for name, expected in files.items():
-        is_native = name == native or bundle["platform"] == "macos" and name.startswith(native + "/")
-        if name != "Rookframe.pck" and not name.startswith("managed/") and not is_native:
-            raise ValueError(f"DEVELOPMENT.RUNTIME: Unsupported member {name}.")
-        source = member(bundle_path.parent, name)
-        if not source.is_file() or digest(source) != expected:
-            raise ValueError(f"DEVELOPMENT.RUNTIME: Damaged or incomplete runtime file: {name}.")
-        target = (PACK if name == "Rookframe.pck" else NATIVE_ROOT + name[len("native/"):] if is_native
-                  else ".godot/mono/temp/bin/Debug/" + name[len("managed/"):])
-        destination = member(project, target)
-        if is_native and destination.exists() and target not in previous.get("files", []):
-            raise ValueError(f"DEVELOPMENT.COLLISION: Move the author-owned native file before preparing: {target}")
-        checked.append((source, destination, expected))
-    # All inputs and paths are validated before any write. Only owned, ignored
-    # runtime locations are touched; author resources and installed Packages stay put.
-    if (project / PACK).exists() and not previous:
-        raise ValueError(f"DEVELOPMENT.COLLISION: Move the existing {PACK} before preparing this project.")
-    targets = {target.relative_to(project).as_posix() for _, target, _ in checked}
+    for source, relative in inputs:
+        destination = member(project, relative)
+        if destination.exists() and relative.startswith(NATIVE_ROOT) and relative not in previous.get("files", []):
+            raise ValueError(f"DEVELOPMENT.COLLISION: Move the author-owned native file before preparing: {relative}")
+        checked.append((source, destination, digest(source)))
+    targets = {relative for _, relative in inputs}
     obsolete = [member(project, name) for name in previous.get("files", [])
-                if name not in targets and (name == PACK or name.startswith((".godot/mono/temp/bin/Debug/", NATIVE_ROOT)))]
-    # Record ownership before staging. An interrupted copy can then be repaired
-    # instead of mistaking our partially prepared PCK for an author's file.
-    ownership.write_text(json.dumps({"bundle": str(bundle_path), "files": sorted(
+                if name not in targets and name.startswith((MANAGED_ROOT, NATIVE_ROOT))]
+    # Only derived libraries are copied. The installed application's PCK is used
+    # directly; there is no second application export or development bundle.
+    ownership.write_text(json.dumps({"application": str(application), "files": sorted(
         targets | {path.relative_to(project).as_posix() for path in obsolete})}, indent=2) + "\n", encoding="utf-8")
-    for source, target, expected in checked:
-        if not target.is_file() or digest(target) != expected:
-            atomic_copy(source, target)
+    for source, destination, expected in checked:
+        if not destination.is_file() or digest(destination) != expected:
+            atomic_copy(source, destination)
     for path in obsolete:
         path.unlink(missing_ok=True)
-    ownership.write_text(json.dumps({"bundle": str(bundle_path), "files": sorted(targets)}, indent=2) + "\n", encoding="utf-8")
-    return {"status": "ready", "engine": bundle["engine"], "runtimeVersion": bundle["version"],
-            "runArguments": RUN_ARGS}
+    ownership.write_text(json.dumps({"application": str(application), "files": sorted(targets)}, indent=2) + "\n", encoding="utf-8")
+    return {"status": "ready", "engine": version, "application": str(application),
+            "runArguments": run_arguments(packs[0])}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, required=True)
-    parser.add_argument("--bundle", type=Path, required=True)
+    parser.add_argument("--rookframe", type=Path, required=True)
     parser.add_argument("--godot", type=Path, required=True)
     parser.add_argument("--architecture", required=True, help="Engine.get_architecture_name() from the author editor")
     args = parser.parse_args(argv)
     try:
         version = subprocess.check_output([str(args.godot), "--version"], text=True).strip()
-        print(json.dumps(prepare(args.project, args.bundle, version, args.architecture)))
+        print(json.dumps(prepare(args.project, args.rookframe, version, args.architecture)))
         return 0
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         print(str(error))
