@@ -14,7 +14,7 @@ plug("rookframe/rookframe-development-plugin", {"tag": "v0.2.0-rc.1", "include":
 ```
 
 Keep the Package's SDK and UI Kit pins. The plugin uses the installed SDK's
-commands; version 0.2.0-rc.1 uses SDK v0.36.0-rc.1. Install dependencies using
+commands; version 0.2.0-rc.1 uses SDK v0.36.0-rc.2. Install dependencies using
 the project's normal `godot --headless --script plug.gd install` command.
 Ignore `addons/rookframe_development/` in the Package's source control.
 
