@@ -1,6 +1,8 @@
 @tool
 extends VBoxContainer
 
+signal configuration_saved
+
 const CONFIG := "res://.rookframe/development.json"
 var _prepared := false
 var _worker: Thread
@@ -20,9 +22,12 @@ func _ready() -> void:
 	%Run.pressed.connect(_run)
 	%Stop.pressed.connect(EditorInterface.stop_playing_scene)
 	%Restart.confirmed.connect(func(): EditorInterface.restart_editor(true))
+	refresh_package()
+	%UsePackage.toggled.connect(func(_enabled: bool): _prepared = false)
 	if FileAccess.file_exists(CONFIG):
 		var config = JSON.parse_string(FileAccess.get_file_as_string(CONFIG))
 		if config is Dictionary:
+			%UsePackage.button_pressed = config.get("developPackage") != null
 			_select_application(config.get("rookframe", ""))
 			%WorldName.text = config.get("worldName", "Package development")
 			%SystemManifest.text = config.get("systemManifest", "") if config.get("systemManifest") != null else ""
@@ -34,6 +39,17 @@ func _ready() -> void:
 	for field in [%Runtime, %WorldName, %SystemManifest]:
 		field.text_changed.connect(func(_value: String): _prepared = false)
 	%Packages.text_changed.connect(func(): _prepared = false)
+
+
+func refresh_package() -> void:
+	var exists := FileAccess.file_exists("res://rookframe.json")
+	var previously_disabled: bool = %UsePackage.disabled
+	%UsePackage.disabled = not exists
+	if not exists:
+		%UsePackage.button_pressed = false
+	elif previously_disabled or not FileAccess.file_exists(CONFIG):
+		%UsePackage.button_pressed = true
+	%PackageStatus.text = "Changes to the selected Package reload while the World runs." if exists else "No Package in this project. Choose a published System below to run a World."
 
 
 func _select_application(path: String) -> void:
@@ -48,7 +64,7 @@ func can_run() -> bool:
 		return true
 	if not _prepared:
 		push_error("Rookframe: prepare the development World in the Rookframe dock before playing.")
-	if _prepared and not ResourceLoader.exists("res://rookframe/development/package.rookframe-dev"):
+	if _prepared and %UsePackage.button_pressed and not ResourceLoader.exists("res://rookframe/development/package.rookframe-dev"):
 		push_error("Rookframe: wait for Godot to finish importing the development declarations before playing.")
 		return false
 	return _prepared
@@ -59,19 +75,29 @@ func _prepare() -> void:
 		%Status.text = "Stop the development session before changing its launch settings. Saves to Package code and resources reload during the session."
 		return
 	_prepared = false
-	var manifest = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json"))
-	if not manifest is Dictionary or not manifest.has("id"):
-		%Status.text = "This project needs a valid rookframe.json Package Manifest."
+	if %WorldName.text.strip_edges().is_empty():
+		%Status.text = "Enter a Development World name."
 		return
+	var manifest: Variant = null
+	if %UsePackage.button_pressed:
+		manifest = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json"))
+		if not manifest is Dictionary or not manifest.has("id"):
+			%Status.text = "The selected Editable Package needs a valid rookframe.json Manifest."
+			return
 	var links: Array[String] = []
 	for line in %Packages.text.split("\n", false):
 		links.append(line.strip_edges())
 	var system: String = %SystemManifest.text.strip_edges()
-	if manifest.get("kind") == "system-extension":
+	if manifest is Dictionary and manifest.get("kind") == "system-extension":
 		system = ""
+	elif system.is_empty():
+		%Status.text = "Enter a published System Manifest URL, or select an editable System Extension."
+		return
 	var config := {"schema": "rookframe-development-v1", "worldName": %WorldName.text.strip_edges(),
 		"systemManifest": null if system.is_empty() else system, "packageManifests": links,
-		"developPackage": manifest.id, "sourceManifest": "res://rookframe.json", "rookframe": %Runtime.text.strip_edges()}
+		"developPackage": manifest.id if manifest is Dictionary else null,
+		"sourceManifest": "res://rookframe.json" if manifest is Dictionary else null,
+		"rookframe": %Runtime.text.strip_edges()}
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://.rookframe"))
 	var file := FileAccess.open(CONFIG, FileAccess.WRITE)
 	if file == null:
@@ -79,6 +105,7 @@ func _prepare() -> void:
 		return
 	file.store_string(JSON.stringify(config, "\t") + "\n")
 	file.close()
+	configuration_saved.emit()
 	%Status.text = "Preparing the project with your installed Rookframe…"
 	_set_preparing(true)
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
@@ -136,7 +163,7 @@ func _process(_delta: float) -> void:
 		%Restart.popup_centered()
 		return
 	_prepared = true
-	%Status.text = "Ready • local development only\nRun the World, then save scripts, scenes or imported models to update it. Godot's Debugger shows errors."
+	%Status.text = "Ready • local development only\nRun the World. Godot's Debugger shows errors."
 	print(result.output)
 
 
@@ -152,6 +179,7 @@ func _set_preparing(active: bool) -> void:
 	%Prepare.disabled = active
 	%Browse.disabled = active
 	%Run.disabled = active
+	%UsePackage.disabled = active or not FileAccess.file_exists("res://rookframe.json")
 	for field in [%Runtime, %WorldName, %SystemManifest, %Packages]:
 		field.editable = not active
 

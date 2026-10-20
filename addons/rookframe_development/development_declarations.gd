@@ -19,6 +19,8 @@ func source_saved(resource: Resource) -> void:
 
 
 func sources_changed(paths: PackedStringArray) -> void:
+	if not _has_editable_package():
+		return
 	var manifest = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json"))
 	if not manifest is Dictionary or not manifest.get("id") is String:
 		return
@@ -36,9 +38,19 @@ func queue_update() -> void:
 		EditorInterface.get_base_control().get_tree().process_frame.connect(_publish, CONNECT_ONE_SHOT)
 
 
+func _has_editable_package() -> bool:
+	if not FileAccess.file_exists("res://rookframe.json"):
+		return false
+	const CONFIG := "res://.rookframe/development.json"
+	if not FileAccess.file_exists(CONFIG):
+		return true
+	var config = JSON.parse_string(FileAccess.get_file_as_string(CONFIG))
+	return config is Dictionary and config.get("developPackage") != null
+
+
 func _publish() -> void:
 	_queued = false
-	if _stopped or not FileAccess.file_exists("res://rookframe.json"):
+	if _stopped or not _has_editable_package():
 		return
 	var filesystem := EditorInterface.get_resource_filesystem()
 	if filesystem.is_importing() or filesystem.is_scanning():

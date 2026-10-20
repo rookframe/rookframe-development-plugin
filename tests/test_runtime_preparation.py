@@ -38,6 +38,37 @@ class InstalledApplicationTests(unittest.TestCase):
     def prepare(self):
         return development.prepare(self.project, self.executable, self.engine, "x86_64")
 
+    def published_world(self):
+        config = {"schema": development.CONFIG_SCHEMA, "worldName": "My World",
+                  "systemManifest": "https://example.com/system.json",
+                  "packageManifests": [], "developPackage": None, "sourceManifest": None}
+        (self.project / ".rookframe/development.json").write_text(json.dumps(config))
+        return config
+
+    def test_prepares_published_world_without_package_or_authoring_dependencies(self):
+        self.published_world()
+        (self.project / "rookframe.json").unlink()
+        self.assertEqual(self.prepare()["status"], "ready")
+        for path in ("addons/rookframe_sdk", "rookframe/sdk", "rookframe/ui", "plug.gd"):
+            self.assertFalse((self.project / path).exists())
+
+    def test_published_world_ignores_unselected_invalid_local_package(self):
+        self.published_world()
+        (self.project / "rookframe.json").write_text("unfinished Package Manifest")
+        self.assertEqual(self.prepare()["status"], "ready")
+
+    def test_requires_system_and_explicit_source_selection_before_staging(self):
+        for changes, diagnostic in (({"systemManifest": None}, "SYSTEM"),
+                                    ({"sourceManifest": "res://rookframe.json"}, "CONFIG"),
+                                    ({"developPackage": "another", "sourceManifest": "res://rookframe.json"}, "IDENTITY")):
+            with self.subTest(changes=changes):
+                config = self.published_world()
+                config.update(changes)
+                (self.project / ".rookframe/development.json").write_text(json.dumps(config))
+                with self.assertRaisesRegex(ValueError, diagnostic):
+                    self.prepare()
+                self.assertFalse((self.project / ".godot").exists())
+
     def test_uses_installed_pack_directly_and_recovers_deleted_library_cache(self):
         prepared = self.prepare()
         self.assertIn(json.dumps((self.application / "Rookframe.pck").as_posix()), prepared["runArguments"])
@@ -56,6 +87,12 @@ class InstalledApplicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "incomplete"):
             self.prepare()
         self.assertEqual((self.project / development.MANAGED_ROOT / "Rookframe.dll").read_bytes(), b"ordinary published application")
+
+    def test_prepares_complete_debug_export_for_host_verification(self):
+        debug = self.native.replace("template_release", "template_debug")
+        (self.application / self.native).rename(self.application / debug)
+        self.assertEqual(self.prepare()["status"], "ready")
+        self.assertEqual((self.project / development.NATIVE_ROOT / debug).read_bytes(), b"ordinary native extension")
 
     def test_requires_matching_stock_mono_editor_and_architecture(self):
         with self.assertRaisesRegex(ValueError, "ENGINE"):

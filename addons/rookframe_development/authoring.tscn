@@ -5,6 +5,11 @@
 size_flags_horizontal = 3
 script = ExtResource("script")
 
+[node name="AuthoringHelp" type="Label" parent="."]
+unique_name_in_owner = true
+text = "Create any Package with stock Godot. Optional libraries: Project > Tools > Rookframe: Install latest SDK or Install latest UI Kit."
+autowrap_mode = 3
+
 [node name="NewPackage" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
 
@@ -43,10 +48,6 @@ unique_name_in_owner = true
 [node name="PackagePath" type="Label" parent="RegisterEntry"]
 unique_name_in_owner = true
 autowrap_mode = 3
-
-[node name="InstallDependencies" type="Button" parent="RegisterEntry"]
-unique_name_in_owner = true
-text = "Install authoring dependencies"
 
 [node name="SceneLabel" type="Label" parent="RegisterEntry"]
 text = "Scene or imported model"

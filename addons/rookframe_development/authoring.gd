@@ -10,7 +10,6 @@ const TYPES := ["prop", "wall_style", "surface_finish", "miniature",
 
 func _ready() -> void:
 	%Initialize.pressed.connect(_initialize)
-	%InstallDependencies.pressed.connect(_install_dependencies)
 	%ChooseScene.pressed.connect(func(): %ScenePicker.popup_centered_ratio(0.7))
 	%ScenePicker.file_selected.connect(_select_scene)
 	%UseScene.pressed.connect(func():
@@ -74,17 +73,16 @@ func refresh() -> void:
 	_update_help()
 
 
-func _install_dependencies() -> void:
+func install_library(library: String) -> void:
 	if _install_worker != null:
 		return
-	%InstallDependencies.disabled = true
-	%AuthorStatus.text = "Installing the pinned UI Kit and gd-plug bootstrap…"
+	%AuthorStatus.text = "Installing latest " + ("SDK" if library == "sdk" else "UI Kit") + "…"
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
 	if python.is_empty():
 		python = "python" if OS.get_name() == "Windows" else "python3"
 	var args := PackedStringArray(["-X", "utf8",
-		ProjectSettings.globalize_path("res://addons/rookframe_sdk/rookframe_authoring.py"),
-		"install-dependencies", "--project", ProjectSettings.globalize_path("res://")])
+		ProjectSettings.globalize_path("res://addons/rookframe_development/optional_libraries.py"),
+		"--library", library, "--project", ProjectSettings.globalize_path("res://")])
 	_install_worker = Thread.new()
 	var error := _install_worker.start(func():
 		var output: Array = []
@@ -92,7 +90,6 @@ func _install_dependencies() -> void:
 		return {"code": code, "output": "\n".join(output)})
 	if error != OK:
 		_install_worker = null
-		%InstallDependencies.disabled = false
 		%AuthorStatus.text = "Cannot start dependency installation: " + error_string(error)
 
 
@@ -100,8 +97,8 @@ func _process(_delta: float) -> void:
 	if _install_worker != null and not _install_worker.is_alive():
 		var result = _install_worker.wait_to_finish()
 		_install_worker = null
-		%InstallDependencies.disabled = false
-		%AuthorStatus.text = "Dependencies installed. Open your Package scene or configure the Development tab." if result.code == OK else result.output
+		%AuthorStatus.text = result.output
+		print(result.output)
 		EditorInterface.get_resource_filesystem().scan()
 
 
@@ -126,7 +123,7 @@ func _run_tool(arguments: PackedStringArray) -> bool:
 	if python.is_empty():
 		python = "python" if OS.get_name() == "Windows" else "python3"
 	var args := PackedStringArray(["-X", "utf8",
-		ProjectSettings.globalize_path("res://addons/rookframe_sdk/rookframe_authoring.py")])
+		ProjectSettings.globalize_path("res://addons/rookframe_development/rookframe_authoring.py")])
 	args.append_array(arguments)
 	args.append_array(PackedStringArray(["--project", ProjectSettings.globalize_path("res://")]))
 	var output: Array = []
@@ -152,7 +149,7 @@ func _initialize() -> void:
 		"--kind", "system-extension" if form == 2 else "optional"])
 	args.append("--content-only" if form == 1 else "--ui")
 	if _run_tool(args):
-		%AuthorStatus.text = "Package created. Install authoring dependencies, then configure the Development tab."
+		%AuthorStatus.text = "Package created. Add models or scenes below the Package directory, then register them."
 
 
 func _select_scene(path: String) -> void:
