@@ -104,13 +104,12 @@ def initialize(project: Path, name: str, kind: str, ui: bool = False, edition: s
     if not (project / ".gitignore").exists():
         proposed[".gitignore"] = ".godot/\n.plugged/\naddons/rookframe_sdk/\naddons/rookframe_development/\naddons/gd-plug/\ndependencies/webrtc_native/lib/\naddons/webrtc_native/lib/\nrookframe/ui/\nrookframe/sdk/\nrookframe_ui_kit_provenance.json\nrookframe/development/\n.rookframe-development/\n.rookframe/development.json\n.rookframe/installed-application.json\nbuild/\n__pycache__/\n"
     if ui and not manifest_path.exists():
-        from rookframe_authoring_scenes import presentation, window_scene, rail_scene
+        from rookframe_authoring_scenes import presentation, window_scene
         manifest["presentations"] = [{"id": "default", "experiences": ["desktop", "tablet", "phone"],
                                       "entryPoint": "ui/presentation.gd"}]
         proposed["rookframe.json"] = json_text(manifest)
         proposed[f"{package_root}/ui/presentation.gd"] = presentation(package_id)
         proposed[f"{package_root}/ui/window.tscn"] = window_scene(name)
-        proposed[f"{package_root}/ui/window_button.tscn"] = rail_scene(name)
     implementation = manifest.get("implementation")
     if implementation and not manifest_path.exists():
         proposed[f"{package_root}/logic/implementation.gd"] = 'extends Node\n'
@@ -134,7 +133,8 @@ def initialize(project: Path, name: str, kind: str, ui: bool = False, edition: s
             additions.append(preset(index, profile, package_id))
             index += 1
     # Preflight every owned/generated collision before adding any scaffolding.
-    for relative in (*proposed, "export_presets.cfg", package_root, package_root + "/models"):
+    for relative in (*proposed, "export_presets.cfg", package_root,
+                     *(package_root + "/" + folder for folder in ("assets", "content", "models"))):
         try:
             project_member(project, relative)
         except ValueError as error:
@@ -149,6 +149,8 @@ def initialize(project: Path, name: str, kind: str, ui: bool = False, edition: s
             raise AuthoringError(f"INIT.CONFLICT: Parent of {relative} is not a directory.")
     (project / package_root).mkdir(parents=True, exist_ok=True)
     (project / package_root / "models").mkdir(exist_ok=True)
+    for folder in ("assets", "content"):
+        (project / package_root / folder).mkdir(exist_ok=True)
     for relative, content in proposed.items():
         path = project / relative
         if not path.exists():
@@ -275,7 +277,7 @@ def main() -> int:
     parser.add_argument("--name", default="My Package")
     parser.add_argument("--kind", choices=("optional", "system-extension"), default="optional")
     parser.add_argument("--edition", choices=tuple(SDK_EDITIONS), default=SDK_EDITION)
-    parser.add_argument("--ui", action="store_true", help="Scaffold an authored scene and a Rail-to-window Presentation for a new Package.")
+    parser.add_argument("--ui", action="store_true", help="Scaffold an ordinary Control scene and an author-owned Presentation.")
     parser.add_argument("--content-only", action="store_true", help="Create an optional Package without scripts or UI.")
     parser.add_argument("--scene")
     parser.add_argument("--entry-id")
@@ -287,6 +289,7 @@ def main() -> int:
     parser.add_argument("--url")
     parser.add_argument("--remove")
     parser.add_argument("--move", type=int, choices=(-1, 0, 1), default=0)
+    parser.add_argument("--expected-manifest", help="Refuse media edits if the Manifest changed since this SHA-256.")
     parser.add_argument("--godot", type=Path, default=Path(os.environ.get("ROOKFRAME_GODOT", "/Applications/Godot_mono.app/Contents/MacOS/Godot")))
     parser.add_argument("--rookframe", type=Path, help="Installed Rookframe executable used to check this Package.")
     parser.add_argument("--output", type=Path)
@@ -299,7 +302,7 @@ def main() -> int:
             result = {"status": "initialized", "project": str(project)}
         elif args.command == "media":
             from rookframe_media import edit
-            result = edit(project, args.file, args.role, args.caption, args.url, args.remove, args.move)
+            result = edit(project, args.file, args.role, args.caption, args.url, args.remove, args.move, args.expected_manifest)
         elif args.command == "register":
             from rookframe_authoring_entries import register
             if not args.scene or not args.entry_id or not args.entry_type:

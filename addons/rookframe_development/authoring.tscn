@@ -1,188 +1,314 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
+
 [ext_resource type="Script" path="res://addons/rookframe_development/authoring.gd" id="script"]
+
+[ext_resource type="PackedScene" path="res://addons/rookframe_development/package_dialogs.tscn" id="dialogs"]
 
 [node name="Package" type="VBoxContainer"]
 size_flags_horizontal = 3
 script = ExtResource("script")
+theme_override_constants/separation = 10
 
-[node name="AuthoringHelp" type="Label" parent="."]
+[node name="Empty" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
-text = "Create any Package with stock Godot. Optional libraries: Project > Tools > Rookframe: Install latest SDK or Install latest UI Kit."
+
+[node name="Welcome" type="Label" parent="Empty"]
+unique_name_in_owner = true
+text = "Rookframe Package"
 autowrap_mode = 3
 
-[node name="NewPackage" type="VBoxContainer" parent="."]
+[node name="WelcomeHelp" type="Label" parent="Empty"]
 unique_name_in_owner = true
-
-[node name="Title" type="Label" parent="NewPackage"]
-text = "Create a Package in this project"
-autowrap_mode = 2
-
-[node name="NameLabel" type="Label" parent="NewPackage"]
-text = "Package name"
-
-[node name="PackageName" type="LineEdit" parent="NewPackage"]
-unique_name_in_owner = true
-placeholder_text = "My Package"
-
-[node name="KindLabel" type="Label" parent="NewPackage"]
-text = "Package kind"
-
-[node name="PackageKind" type="OptionButton" parent="NewPackage"]
-unique_name_in_owner = true
-item_count = 3
-selected = 0
-popup/item_0/text = "Extension with UI"
-popup/item_0/id = 0
-popup/item_1/text = "Content pack"
-popup/item_1/id = 1
-popup/item_2/text = "System Extension"
-popup/item_2/id = 2
-
-[node name="Initialize" type="Button" parent="NewPackage"]
-unique_name_in_owner = true
-text = "Create Package"
-
-[node name="RegisterEntry" type="VBoxContainer" parent="."]
-unique_name_in_owner = true
-
-[node name="PackagePath" type="Label" parent="RegisterEntry"]
-unique_name_in_owner = true
+text = "Prepare a home for your content, behavior or game rules. Then work in Godot as usual."
 autowrap_mode = 3
 
-[node name="SceneLabel" type="Label" parent="RegisterEntry"]
-text = "Scene or imported model"
-
-[node name="ScenePath" type="LineEdit" parent="RegisterEntry"]
+[node name="Create" type="Button" parent="Empty"]
 unique_name_in_owner = true
-placeholder_text = "res://rookframe/packages/…"
+text = "Create Package…"
 
-[node name="SceneActions" type="HBoxContainer" parent="RegisterEntry"]
-
-[node name="ChooseScene" type="Button" parent="RegisterEntry/SceneActions"]
+[node name="PackageBody" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
-text = "Browse…"
+theme_override_constants/separation = 8
+
+[node name="PackageTitle" type="Label" parent="PackageBody"]
+unique_name_in_owner = true
+text = "Package"
+autowrap_mode = 3
+
+[node name="PackageRole" type="Label" parent="PackageBody"]
+unique_name_in_owner = true
+text = "Content pack"
+autowrap_mode = 3
+
+[node name="PackageActions" type="HBoxContainer" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="Folder" type="Button" parent="PackageBody/PackageActions"]
+unique_name_in_owner = true
+text = "Open folder"
 size_flags_horizontal = 3
 
-[node name="UseScene" type="Button" parent="RegisterEntry/SceneActions"]
+[node name="Settings" type="Button" parent="PackageBody/PackageActions"]
 unique_name_in_owner = true
-text = "Use open scene"
+text = "Details…"
 size_flags_horizontal = 3
 
-[node name="NameLabel" type="Label" parent="RegisterEntry"]
-text = "Display name"
-
-[node name="EntryName" type="LineEdit" parent="RegisterEntry"]
+[node name="Divider" type="HSeparator" parent="PackageBody"]
 unique_name_in_owner = true
 
-[node name="IdLabel" type="Label" parent="RegisterEntry"]
-text = "Stable entry ID"
-
-[node name="EntryId" type="LineEdit" parent="RegisterEntry"]
+[node name="ContentTitle" type="Label" parent="PackageBody"]
 unique_name_in_owner = true
-
-[node name="TypeLabel" type="Label" parent="RegisterEntry"]
-text = "Register as"
-
-[node name="EntryType" type="OptionButton" parent="RegisterEntry"]
-unique_name_in_owner = true
-item_count = 9
-selected = 0
-popup/item_0/text = "Prop"
-popup/item_0/id = 0
-popup/item_1/text = "Wall Style"
-popup/item_1/id = 1
-popup/item_2/text = "Surface Finish"
-popup/item_2/id = 2
-popup/item_3/text = "Miniature"
-popup/item_3/id = 3
-popup/item_4/text = "Window — left rail"
-popup/item_4/id = 4
-popup/item_5/text = "Window — right rail"
-popup/item_5/id = 5
-popup/item_6/text = "Package UI root"
-popup/item_6/id = 6
-popup/item_7/text = "Actor creation"
-popup/item_7/id = 7
-popup/item_8/text = "Selected Rook"
-popup/item_8/id = 8
-
-[node name="PresentationRow" type="VBoxContainer" parent="RegisterEntry"]
-unique_name_in_owner = true
-
-[node name="Label" type="Label" parent="RegisterEntry/PresentationRow"]
-text = "Presentation"
-
-[node name="Presentation" type="OptionButton" parent="RegisterEntry/PresentationRow"]
-unique_name_in_owner = true
-
-[node name="EntryHelp" type="Label" parent="RegisterEntry"]
-unique_name_in_owner = true
-autowrap_mode = 2
-
-[node name="PrepareModel" type="Button" parent="RegisterEntry"]
-unique_name_in_owner = true
-text = "Prepare model scene"
-
-[node name="Register" type="Button" parent="RegisterEntry"]
-unique_name_in_owner = true
-text = "Register scene"
-
-[node name="ReleaseMedia" type="VBoxContainer" parent="."]
-unique_name_in_owner = true
-
-[node name="Title" type="Label" parent="ReleaseMedia"]
-text = "Release images and videos"
-
-[node name="Help" type="Label" parent="ReleaseMedia"]
-text = "The cover also supplies the default image for games using this System. Attach PNG, JPEG or WebP images and OGV, MP4 or WebM videos before building your release."
+text = "Content"
 autowrap_mode = 3
 
-[node name="MediaItems" type="ItemList" parent="ReleaseMedia"]
+[node name="Search" type="LineEdit" parent="PackageBody"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 110)
+placeholder_text = "Find Content by name or path"
+clear_button_enabled = true
 
-[node name="MediaCaption" type="LineEdit" parent="ReleaseMedia"]
+[node name="Filter" type="OptionButton" parent="PackageBody"]
 unique_name_in_owner = true
-placeholder_text = "Caption for the next attachment (optional)"
-max_length = 200
 
-[node name="AddActions" type="HBoxContainer" parent="ReleaseMedia"]
-
-[node name="ChooseCover" type="Button" parent="ReleaseMedia/AddActions"]
+[node name="Contents" type="Tree" parent="PackageBody"]
 unique_name_in_owner = true
-text = "Choose cover…"
+columns = 2
+hide_root = true
+custom_minimum_size = Vector2(0, 150)
+size_flags_horizontal = 3
 
-[node name="AddMedia" type="Button" parent="ReleaseMedia/AddActions"]
+[node name="ContentHelp" type="Label" parent="PackageBody"]
 unique_name_in_owner = true
-text = "Add image or video…"
+text = ""
+autowrap_mode = 3
 
-[node name="EditActions" type="HBoxContainer" parent="ReleaseMedia"]
-
-[node name="RemoveMedia" type="Button" parent="ReleaseMedia/EditActions"]
+[node name="HiddenSelection" type="Label" parent="PackageBody"]
 unique_name_in_owner = true
-text = "Remove"
+visible = false
+text = "The inspected item is hidden by this filter."
+autowrap_mode = 3
 
-[node name="MediaUp" type="Button" parent="ReleaseMedia/EditActions"]
+[node name="ClearFilter" type="Button" parent="PackageBody"]
 unique_name_in_owner = true
-text = "Move up"
+visible = false
+text = "Clear filter"
 
-[node name="MediaDown" type="Button" parent="ReleaseMedia/EditActions"]
+[node name="ContentActions" type="HBoxContainer" parent="PackageBody"]
 unique_name_in_owner = true
-text = "Move down"
 
-[node name="MediaPicker" type="EditorFileDialog" parent="."]
+[node name="AddExisting" type="Button" parent="PackageBody/ContentActions"]
 unique_name_in_owner = true
-title = "Attach release media"
-access = 2
+text = "Select resource…"
+size_flags_horizontal = 3
+
+[node name="OpenContent" type="Button" parent="PackageBody/ContentActions"]
+unique_name_in_owner = true
+text = "Open source"
+size_flags_horizontal = 3
+
+[node name="SourceArea" type="VBoxContainer" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="SourceDivider" type="HSeparator" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+
+[node name="SourceTitle" type="Label" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Behavior and UI"
+autowrap_mode = 3
+
+[node name="SourceHelp" type="Label" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Edit GDScript and Control scenes in Godot. Presentations choose the UI for desktop, tablet or phone."
+autowrap_mode = 3
+
+[node name="Sources" type="Tree" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+hide_root = true
+custom_minimum_size = Vector2(0, 100)
+
+[node name="SourceActions" type="HBoxContainer" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+
+[node name="OpenSource" type="Button" parent="PackageBody/SourceArea/SourceActions"]
+unique_name_in_owner = true
+text = "Open script"
+size_flags_horizontal = 3
+
+[node name="EditPresentation" type="Button" parent="PackageBody/SourceArea/SourceActions"]
+unique_name_in_owner = true
+text = "Edit coverage…"
+size_flags_horizontal = 3
+
+[node name="AddBehavior" type="Button" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Add behavior…"
+
+[node name="AddPresentation" type="Button" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Add Presentation…"
+
+[node name="SystemHelp" type="Label" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Start with Actor data and creation, then author inspection and editing UI. Declare Actor definitions as System Content. Use Actor operations for accepted changes; keep extra Package-wide state in World Data."
+autowrap_mode = 3
+
+[node name="ApiDocs" type="Button" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "API reference ↗"
+
+[node name="ActorDocs" type="Button" parent="PackageBody/SourceArea"]
+unique_name_in_owner = true
+text = "Actor and System data guide ↗"
+
+[node name="LibrariesDivider" type="HSeparator" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="Libraries" type="Button" parent="PackageBody"]
+unique_name_in_owner = true
+text = "Optional libraries"
+toggle_mode = true
+alignment = 0
+
+[node name="LibraryRows" type="VBoxContainer" parent="PackageBody"]
+unique_name_in_owner = true
+visible = false
+
+[node name="LibraryHelp" type="Label" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "Install each library only when you need it. Downloads preserve your edited files."
+autowrap_mode = 3
+
+[node name="SdkVersion" type="Label" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "SDK: Not installed"
+autowrap_mode = 3
+
+[node name="InstallSdk" type="Button" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "Download latest SDK"
+
+[node name="SdkHelp" type="Label" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "GDScript APIs for Actors, Rooks, Worlds and other Rookframe operations."
+autowrap_mode = 3
+
+[node name="UiVersion" type="Label" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "UI Kit: Not installed"
+autowrap_mode = 3
+
+[node name="InstallUi" type="Button" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "Download latest UI Kit"
+
+[node name="UiHelp" type="Label" parent="PackageBody/LibraryRows"]
+unique_name_in_owner = true
+text = "Reusable Godot Controls for your interfaces. Independent of the SDK."
+autowrap_mode = 3
+
+[node name="SaveDivider" type="HSeparator" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="SaveRow" type="HBoxContainer" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="Dirty" type="Label" parent="PackageBody/SaveRow"]
+unique_name_in_owner = true
+text = "Package saved"
+autowrap_mode = 3
+size_flags_horizontal = 3
+
+[node name="Save" type="Button" parent="PackageBody/SaveRow"]
+unique_name_in_owner = true
+text = "Save"
+
+[node name="CheckPackage" type="Button" parent="PackageBody"]
+unique_name_in_owner = true
+text = "Check Package"
+
+[node name="BuildRow" type="HBoxContainer" parent="PackageBody"]
+unique_name_in_owner = true
+
+[node name="BuildPackage" type="Button" parent="PackageBody/BuildRow"]
+unique_name_in_owner = true
+text = "Build Package"
+size_flags_horizontal = 3
+
+[node name="Release" type="Button" parent="PackageBody/BuildRow"]
+unique_name_in_owner = true
+text = "Release details…"
+size_flags_horizontal = 3
+
+[node name="Conflict" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="ConflictText" type="Label" parent="Conflict"]
+unique_name_in_owner = true
+text = ""
+autowrap_mode = 3
+
+[node name="CopyDraft" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Copy draft"
+
+[node name="Reload" type="Button" parent="Conflict"]
+unique_name_in_owner = true
+text = "Reload file…"
+
+[node name="Status" type="Label" parent="."]
+unique_name_in_owner = true
+text = ""
+autowrap_mode = 3
+
+[node name="Logs" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Operation details…"
+visible = false
+
+[node name="BuildResult" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="BuildPath" type="Label" parent="BuildResult"]
+unique_name_in_owner = true
+text = ""
+autowrap_mode = 3
+
+[node name="ShowBuild" type="Button" parent="BuildResult"]
+unique_name_in_owner = true
+text = "Show archive"
+
+[node name="CopyBuild" type="Button" parent="BuildResult"]
+unique_name_in_owner = true
+text = "Copy archive path"
+
+[node name="ContentPicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Select Package Resource"
 file_mode = 0
+filters = PackedStringArray("*.tscn,*.tres,*.res,*.scn ; Godot scenes and Resources")
 
-[node name="AuthorStatus" type="Label" parent="."]
+[node name="ConfirmReload" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
-autowrap_mode = 2
-focus_mode = 2
+title = "Reload Package"
+dialog_text = "Discard this Package draft and load rookframe.json from disk? Scene and Resource edits are kept."
 
-[node name="ScenePicker" type="EditorFileDialog" parent="."]
+[node name="LogDialog" type="AcceptDialog" parent="."]
 unique_name_in_owner = true
-title = "Choose Package scene"
-file_mode = 0
-filters = PackedStringArray("*.tscn,*.glb,*.gltf ; Godot scene or imported model")
+title = "Package operation details"
+
+[node name="LogText" type="TextEdit" parent="LogDialog"]
+unique_name_in_owner = true
+editable = false
+custom_minimum_size = Vector2(600, 320)
+wrap_mode = 1
+
+[node name="Dialogs" parent="." instance=ExtResource("dialogs")]
+unique_name_in_owner = true
+
+[node name="ProblemSources" type="ItemList" parent="."]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 75)
+tooltip_text = "Double-click a source to open it in Godot."

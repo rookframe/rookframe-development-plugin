@@ -11,6 +11,12 @@ layout_key = "rookframe_development"
 
 [node name="Tabs" type="TabContainer" parent="."]
 
+[node name="Package" type="ScrollContainer" parent="Tabs"]
+horizontal_scroll_mode = 0
+
+[node name="Package" parent="Tabs/Package" instance=ExtResource("author")]
+size_flags_horizontal = 3
+
 [node name="Development" type="ScrollContainer" parent="Tabs"]
 horizontal_scroll_mode = 0
 
@@ -25,57 +31,6 @@ text = "Development World"
 [node name="Explanation" type="Label" parent="Tabs/Development/Content"]
 text = "Run a local World using your installed Rookframe application. Networking is disabled."
 autowrap_mode = 2
-
-[node name="UsePackage" type="CheckButton" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-text = "Edit this project's Package"
-disabled = true
-
-[node name="PackageStatus" type="Label" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-autowrap_mode = 3
-
-[node name="RuntimeLabel" type="Label" parent="Tabs/Development/Content"]
-text = "Rookframe application"
-
-[node name="RuntimeRow" type="HBoxContainer" parent="Tabs/Development/Content"]
-
-[node name="Runtime" type="LineEdit" parent="Tabs/Development/Content/RuntimeRow"]
-unique_name_in_owner = true
-size_flags_horizontal = 3
-placeholder_text = "Installed Rookframe executable"
-
-[node name="Browse" type="Button" parent="Tabs/Development/Content/RuntimeRow"]
-unique_name_in_owner = true
-text = "Browse…"
-
-[node name="WorldLabel" type="Label" parent="Tabs/Development/Content"]
-text = "Development World name"
-
-[node name="WorldName" type="LineEdit" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-text = "Development World"
-
-[node name="SystemLabel" type="Label" parent="Tabs/Development/Content"]
-text = "System Manifest URL"
-autowrap_mode = 2
-
-[node name="SystemManifest" type="LineEdit" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-placeholder_text = "https://…"
-
-[node name="PackagesLabel" type="Label" parent="Tabs/Development/Content"]
-text = "Other Package Manifest URLs (one per line)"
-autowrap_mode = 2
-
-[node name="Packages" type="TextEdit" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 100)
-placeholder_text = "https://…"
-
-[node name="Prepare" type="Button" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-text = "Save and prepare"
 
 [node name="Actions" type="HBoxContainer" parent="Tabs/Development/Content"]
 
@@ -93,6 +48,66 @@ unique_name_in_owner = true
 text = "Choose your installed Rookframe application."
 autowrap_mode = 2
 
+[node name="EditSetup" type="Button" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+text = "Edit setup"
+toggle_mode = true
+button_pressed = true
+
+[node name="Setup" type="VBoxContainer" parent="Tabs/Development/Content"]
+unique_name_in_owner = true
+
+[node name="UsePackage" type="CheckButton" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+text = "Edit this project's Package"
+disabled = true
+
+[node name="PackageStatus" type="Label" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="RuntimeLabel" type="Label" parent="Tabs/Development/Content/Setup"]
+text = "Rookframe application"
+
+[node name="RuntimeRow" type="HBoxContainer" parent="Tabs/Development/Content/Setup"]
+
+[node name="Runtime" type="LineEdit" parent="Tabs/Development/Content/Setup/RuntimeRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Installed Rookframe executable"
+
+[node name="Browse" type="Button" parent="Tabs/Development/Content/Setup/RuntimeRow"]
+unique_name_in_owner = true
+text = "Browse…"
+
+[node name="WorldLabel" type="Label" parent="Tabs/Development/Content/Setup"]
+text = "Development World name"
+
+[node name="WorldName" type="LineEdit" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+text = "Development World"
+
+[node name="SystemLabel" type="Label" parent="Tabs/Development/Content/Setup"]
+text = "System Manifest URL"
+autowrap_mode = 2
+
+[node name="SystemManifest" type="LineEdit" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+placeholder_text = "https://…"
+
+[node name="PackagesLabel" type="Label" parent="Tabs/Development/Content/Setup"]
+text = "Other Package Manifest URLs (one per line)"
+autowrap_mode = 2
+
+[node name="Packages" type="TextEdit" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+placeholder_text = "https://…"
+
+[node name="Prepare" type="Button" parent="Tabs/Development/Content/Setup"]
+unique_name_in_owner = true
+text = "Save and prepare"
+
 [node name="RuntimePicker" type="FileDialog" parent="Tabs/Development/Content"]
 unique_name_in_owner = true
 title = "Choose Rookframe application"
@@ -105,9 +120,3 @@ unique_name_in_owner = true
 title = "Activate development support"
 dialog_text = "Godot reads launch and Game tab settings when the editor opens.\nSave and reopen this editor once to activate them.\nAfter that, Package edits reload in the running World."
 ok_button_text = "Save and reopen editor"
-
-[node name="Package" type="ScrollContainer" parent="Tabs"]
-horizontal_scroll_mode = 0
-
-[node name="Package" parent="Tabs/Package" instance=ExtResource("author")]
-size_flags_horizontal = 3

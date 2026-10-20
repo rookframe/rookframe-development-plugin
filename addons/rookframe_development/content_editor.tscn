@@ -1,0 +1,180 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://addons/rookframe_development/content_editor.gd" id="1"]
+
+[node name="RookframeContent" type="VBoxContainer"]
+script = ExtResource("1")
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Rookframe Content"
+toggle_mode = true
+clip_text = true
+alignment = 0
+
+[node name="Payload" type="Label" parent="."]
+unique_name_in_owner = true
+text_overrun_behavior = 3
+
+[node name="MakeAvailable" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Make available in Rookframe…"
+
+[node name="Fields" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+theme_override_constants/separation = 6
+
+[node name="NameLabel" type="Label" parent="Fields"]
+text = "Display name"
+
+[node name="DisplayName" type="LineEdit" parent="Fields"]
+unique_name_in_owner = true
+
+[node name="TypeLabel" type="Label" parent="Fields"]
+text = "Content type"
+
+[node name="Type" type="OptionButton" parent="Fields"]
+unique_name_in_owner = true
+
+[node name="TypeName" type="Label" parent="Fields"]
+unique_name_in_owner = true
+
+[node name="Help" type="Label" parent="Fields"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="System" type="VBoxContainer" parent="Fields"]
+unique_name_in_owner = true
+
+[node name="SystemLabel" type="Label" parent="Fields/System"]
+text = "Target System UUID"
+[node name="TargetSystem" type="LineEdit" parent="Fields/System"]
+unique_name_in_owner = true
+[node name="ContractLabel" type="Label" parent="Fields/System"]
+text = "System contract identifier"
+[node name="Contract" type="LineEdit" parent="Fields/System"]
+unique_name_in_owner = true
+[node name="VersionsLabel" type="Label" parent="Fields/System"]
+text = "Compatible System versions"
+[node name="Versions" type="LineEdit" parent="Fields/System"]
+unique_name_in_owner = true
+placeholder_text = "e.g. >=1.0.0 <2.0.0"
+[node name="TypeLabel" type="Label" parent="Fields/System"]
+text = "System-defined Content type"
+[node name="SystemType" type="LineEdit" parent="Fields/System"]
+unique_name_in_owner = true
+
+[node name="Add" type="Button" parent="Fields"]
+unique_name_in_owner = true
+text = "Add to Package"
+
+[node name="Existing" type="VBoxContainer" parent="Fields"]
+unique_name_in_owner = true
+theme_override_constants/separation = 6
+[node name="PreviewLabel" type="Label" parent="Fields/Existing"]
+text = "Content preview (optional)"
+[node name="Preview" type="LineEdit" parent="Fields/Existing"]
+unique_name_in_owner = true
+placeholder_text = "Package-relative image path"
+[node name="Identity" type="Button" parent="Fields/Existing"]
+unique_name_in_owner = true
+text = "Identity…"
+flat = true
+[node name="IdentityValue" type="VBoxContainer" parent="Fields/Existing"]
+unique_name_in_owner = true
+visible = false
+[node name="Value" type="Label" parent="Fields/Existing/IdentityValue"]
+autowrap_mode = 3
+[node name="CopyId" type="Button" parent="Fields/Existing/IdentityValue"]
+unique_name_in_owner = true
+text = "Copy Content ID"
+[node name="Remove" type="Button" parent="Fields/Existing"]
+unique_name_in_owner = true
+text = "Remove from Package…"
+flat = true
+
+[node name="Status" type="Label" parent="."]
+unique_name_in_owner = true
+autowrap_mode = 3
+[node name="Check" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Check this content"
+[node name="Open" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Open resource"
+[node name="Locate" type="Button" parent="."]
+unique_name_in_owner = true
+text = "Locate resource…"
+tooltip_text = "Keep this Content identity and point it to its authored resource."
+
+[node name="ConfirmRemove" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Remove Content declaration"
+dialog_text = "The source files will remain. Worlds using this Content may lose its resolution in a later release.\nYou can restore this declaration with Undo."
+ok_button_text = "Remove declaration"
+[node name="ResourcePicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Locate Content resource"
+file_mode = 0
+
+[node name="PropFields" type="VBoxContainer" parent="Fields/Existing"]
+unique_name_in_owner = true
+[node name="SwitchableLight" type="CheckBox" parent="Fields/Existing/PropFields"]
+unique_name_in_owner = true
+text = "Switchable light"
+tooltip_text = "Expose the authored light as a switchable Prop."
+[node name="WallMount" type="CheckBox" parent="Fields/Existing/PropFields"]
+unique_name_in_owner = true
+text = "Mount on walls"
+[node name="MountFields" type="VBoxContainer" parent="Fields/Existing/PropFields"]
+unique_name_in_owner = true
+[node name="MountWidthLabel" type="Label" parent="Fields/Existing/PropFields/MountFields"]
+text = "Width (metres)"
+autowrap_mode = 3
+[node name="MountWidth" type="SpinBox" parent="Fields/Existing/PropFields/MountFields"]
+unique_name_in_owner = true
+min_value = 0.001
+max_value = 100.0
+step = 0.01
+value = 1.0
+allow_greater = true
+[node name="MountHeightLabel" type="Label" parent="Fields/Existing/PropFields/MountFields"]
+text = "Height (metres)"
+autowrap_mode = 3
+[node name="MountHeight" type="SpinBox" parent="Fields/Existing/PropFields/MountFields"]
+unique_name_in_owner = true
+min_value = 0.001
+max_value = 100.0
+step = 0.01
+value = 1.0
+allow_greater = true
+[node name="MountDefaultLabel" type="Label" parent="Fields/Existing/PropFields/MountFields"]
+text = "Default height above floor (metres)"
+autowrap_mode = 3
+[node name="MountDefault" type="SpinBox" parent="Fields/Existing/PropFields/MountFields"]
+unique_name_in_owner = true
+min_value = 0.001
+max_value = 100.0
+step = 0.01
+value = 1.0
+allow_greater = true
+
+[node name="Appearance" type="VBoxContainer" parent="Fields"]
+unique_name_in_owner = true
+[node name="AppearanceContext" type="Label" parent="Fields/Appearance"]
+unique_name_in_owner = true
+autowrap_mode = 3
+[node name="SampleWidthLabel" type="Label" parent="Fields/Appearance"]
+text = "Sample width (world units)"
+[node name="SampleWidth" type="SpinBox" parent="Fields/Appearance"]
+unique_name_in_owner = true
+min_value = 0.05
+max_value = 100.0
+step = 0.05
+value = 1.0
+[node name="ApplyAppearance" type="Button" parent="Fields/Appearance"]
+unique_name_in_owner = true
+text = "Apply appearance settings"
+[node name="InspectStructure" type="Button" parent="Fields"]
+unique_name_in_owner = true
+text = "Inspect scene structure"

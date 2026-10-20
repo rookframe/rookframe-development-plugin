@@ -2,304 +2,347 @@
 extends VBoxContainer
 
 signal package_changed(paths: PackedStringArray)
-var _install_worker: Thread
-var _media_role := "gallery"
-const TYPES := ["prop", "wall_style", "surface_finish", "miniature",
-	"left", "right", "ui_root", "actor_creation", "selected_rook"]
+
+const Selection = preload("res://addons/rookframe_development/content_selection.gd")
+const Requirements = preload("res://addons/rookframe_development/content_requirements.gd")
+const API_DOCS := "https://github.com/rookframe/rookframe-sdk/blob/v0.36.0-rc.4/API.md"
+var model: RefCounted
+var _worker: Thread
+var _job := ""
+var _refreshing := false
+var _selection: Resource
+var _logs := ""
+var _pending_result: Dictionary = {}
+var _selected_content_id := ""
+var _source_revision := 0
+var _job_source_revision := 0
+
+
+func configure(source: RefCounted) -> void:
+	model = source
+	model.changed.connect(refresh)
+	model.changed.connect(source_changed)
+	model.problem.connect(func(message: String): %Status.text = message)
+	model.saved.connect(func(paths: PackedStringArray):
+		package_changed.emit(paths)
+		EditorInterface.get_resource_filesystem().scan())
+	%Dialogs.configure(model, _run_tool)
+	refresh()
 
 
 func _ready() -> void:
-	%Initialize.pressed.connect(_initialize)
-	%ChooseScene.pressed.connect(func(): %ScenePicker.popup_centered_ratio(0.7))
-	%ScenePicker.file_selected.connect(_select_scene)
-	%UseScene.pressed.connect(func():
-		var root := EditorInterface.get_edited_scene_root()
-		if root != null:
-			_select_scene(root.scene_file_path))
-	%Register.pressed.connect(_register)
-	%PrepareModel.pressed.connect(_prepare_model)
-	%EntryName.text_changed.connect(func(value: String):
-		if not %EntryId.has_focus():
-			%EntryId.text = _slug(value))
-	%EntryType.item_selected.connect(func(_index: int): _update_help())
-	%ChooseCover.pressed.connect(func(): _choose_media("cover"))
-	%AddMedia.pressed.connect(func(): _choose_media("gallery"))
-	%MediaPicker.file_selected.connect(func(path: String):
-		_run_tool(PackedStringArray(["media", "--file", path, "--role", _media_role,
-			"--caption", %MediaCaption.text.strip_edges()])))
-	%RemoveMedia.pressed.connect(func(): _change_media(0))
-	%MediaUp.pressed.connect(func(): _change_media(-1))
-	%MediaDown.pressed.connect(func(): _change_media(1))
-	refresh()
-
-
-func _choose_media(role: String) -> void:
-	_media_role = role
-	%MediaPicker.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp ; Images"])
-	if role == "gallery": %MediaPicker.add_filter("*.ogv,*.mp4,*.webm", "Videos")
-	%MediaPicker.popup_centered_ratio(0.7)
-
-
-func _change_media(direction: int) -> void:
-	var selected: PackedInt32Array = %MediaItems.get_selected_items()
-	if selected.is_empty(): return
-	var path: String = %MediaItems.get_item_metadata(selected[0])
-	var args := PackedStringArray(["media", "--remove", path])
-	if direction != 0: args.append_array(["--move", str(direction)])
-	_run_tool(args)
+	%Create.pressed.connect(func(): %Dialogs.open_setup())
+	%Settings.pressed.connect(func(): %Dialogs.open_settings())
+	%Folder.pressed.connect(func(): EditorInterface.get_file_system_dock().navigate_to_path(model.root_path()))
+	%Search.text_changed.connect(func(_text: String): _content_list())
+	for item in ["All Content", "Miniatures", "Props", "Wall Styles", "Surface Finishes", "Themes", "System Content"]:
+		%Filter.add_item(item)
+	%Filter.item_selected.connect(func(_index: int): _content_list())
+	%ClearFilter.pressed.connect(func():
+		%Search.clear()
+		%Filter.select(0)
+		_content_list())
+	%Contents.item_selected.connect(_inspect)
+	%Contents.item_activated.connect(_open_content)
+	%OpenContent.pressed.connect(_open_content)
+	%AddExisting.pressed.connect(func():
+		%ContentPicker.current_dir = model.root_path()
+		%ContentPicker.popup_centered_ratio(0.65))
+	%ContentPicker.file_selected.connect(func(path: String):
+		if not model.owns(path):
+			%Status.text = "Choose a saved scene or Resource inside this Package's folder."
+			return
+		var resource := ResourceLoader.load(path)
+		if resource != null:
+			EditorInterface.edit_resource(resource))
+	%Sources.item_selected.connect(_source_selected)
+	%Sources.item_activated.connect(_open_source)
+	%OpenSource.pressed.connect(_open_source)
+	%EditPresentation.pressed.connect(func(): %Dialogs.open_presentation(str(_source_data().get("id", ""))))
+	%AddPresentation.pressed.connect(func(): %Dialogs.open_presentation())
+	%AddBehavior.pressed.connect(func(): %Dialogs.open_behavior())
+	%Libraries.toggled.connect(func(value: bool): %LibraryRows.visible = value)
+	%ApiDocs.pressed.connect(func(): OS.shell_open(API_DOCS))
+	%ActorDocs.pressed.connect(func(): OS.shell_open(API_DOCS + "#actors-and-system-records"))
+	%InstallSdk.pressed.connect(func(): install_library("sdk"))
+	%InstallUi.pressed.connect(func(): install_library("ui-kit"))
+	%Save.pressed.connect(func(): model.save())
+	%CheckPackage.pressed.connect(func(): run_command("check"))
+	%BuildPackage.pressed.connect(func(): run_command("build"))
+	%Release.pressed.connect(func(): %Dialogs.open_release())
+	%CopyDraft.pressed.connect(func(): DisplayServer.clipboard_set(JSON.stringify(model.manifest, "\t")))
+	%Reload.pressed.connect(func(): %ConfirmReload.popup_centered())
+	%ConfirmReload.confirmed.connect(func(): model.reload(true))
+	%Logs.pressed.connect(func():
+		%LogText.text = _logs
+		%LogDialog.popup_centered_ratio(0.75))
+	%ShowBuild.pressed.connect(func(): OS.shell_show_in_file_manager(%BuildPath.text))
+	%CopyBuild.pressed.connect(func(): DisplayServer.clipboard_set(%BuildPath.text))
+	%ProblemSources.item_activated.connect(func(index: int): _open_path(str(%ProblemSources.get_item_metadata(index))))
 
 
 func refresh() -> void:
-	var exists := FileAccess.file_exists("res://rookframe.json")
-	%NewPackage.visible = not exists
-	%RegisterEntry.visible = exists
-	%ReleaseMedia.visible = exists
+	if model == null:
+		return
+	_refreshing = true
+	var exists: bool = not model.manifest.is_empty()
+	%Empty.visible = not exists
+	%PackageBody.visible = exists
+	%Conflict.visible = not model.conflict.is_empty()
+	%ConflictText.text = model.conflict
+	%CopyDraft.visible = exists and model.dirty()
 	if exists:
-		var manifest = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json"))
-		if manifest is Dictionary:
-			%EntryType.set_item_disabled(7, manifest.get("kind") != "system-extension")
-			%PackagePath.text = "Save Package scenes below:\nres://rookframe/packages/" + str(manifest.get("id", "")) + "/"
-			%MediaItems.clear()
-			var media: Dictionary = manifest.get("media", {})
-			var entries: Array = media.get("gallery", []).duplicate()
-			if media.get("cover") != null: entries.push_front(media.cover)
-			for entry in entries:
-				var label := "Cover" if entry == media.get("cover") else str(entry.type).capitalize()
-				var index: int = %MediaItems.add_item(label + " · " + str(entry.get("caption", entry.path.get_file())))
-				%MediaItems.set_item_metadata(index, entry.path)
-			%Presentation.clear()
-			for entry in manifest.get("presentations", []):
-				%Presentation.add_item(entry.id)
-	_update_help()
+		%PackageTitle.text = str(model.manifest.name)
+		%PackageRole.text = "System Extension" if model.manifest.kind == "system-extension" else (
+			"Extension" if model.manifest.has("implementation") or model.manifest.has("presentations") else "Content pack")
+		%Dirty.text = "Unsaved Package changes" if model.dirty() else "Package saved"
+		%Save.disabled = not model.dirty() or not model.conflict.is_empty() or model.busy
+		var scripted: bool = model.manifest.has("implementation") or model.manifest.has("presentations") or model.manifest.kind == "system-extension"
+		%SourceArea.visible = true
+		%Sources.visible = scripted
+		%SourceActions.visible = scripted
+		%SourceHelp.text = "Edit GDScript and Control scenes in Godot. Presentations select UI for desktop, tablet or phone." if scripted else "Add behavior or UI only if your Package needs it."
+		%SystemHelp.visible = model.manifest.kind == "system-extension"
+		%ActorDocs.visible = %SystemHelp.visible
+		%ApiDocs.visible = scripted
+		%ApiDocs.text = "API " + str(model.manifest.sdk.edition) + " reference ↗"
+		%ApiDocs.tooltip_text = "Domain operations and their revision requirements. This Package requires revision " + str(model.manifest.sdk.minimumRevision) + " or later. The SDK is optional."
+		%AddBehavior.visible = not model.manifest.has("implementation")
+		_content_list()
+		_source_list()
+		_library_status()
+	for button: Button in [%CheckPackage, %BuildPackage, %InstallSdk, %InstallUi, %Settings, %Release, %AddBehavior, %AddPresentation]:
+		button.disabled = model.busy or not model.conflict.is_empty()
+	%Create.disabled = model.busy or not model.conflict.is_empty()
+	_refreshing = false
+
+
+func source_changed() -> void:
+	_source_revision += 1
+	if %Status.text.begins_with("Saved source checked"):
+		%Status.text = "Sources changed since the last check. Check Package again before building."
+
+
+func _content_list() -> void:
+	if model == null:
+		return
+	var was_refreshing := _refreshing
+	_refreshing = true
+	var selected := _selected_content_id
+	var found := false
+	var names: Dictionary = {}
+	for entry: Dictionary in model.entries():
+		names[str(entry.displayName)] = int(names.get(str(entry.displayName), 0)) + 1
+	%Contents.clear()
+	var root: TreeItem = %Contents.create_item()
+	var count := 0
+	for entry: Dictionary in model.entries():
+		var type := str(entry.type)
+		var index := Requirements.TYPES.find(type)
+		if index < 0:
+			index = 5
+		if %Filter.selected > 0 and index != %Filter.selected - 1:
+			continue
+		var query: String = %Search.text.strip_edges().to_lower()
+		if not query.is_empty() and not (str(entry.displayName) + " " + str(entry.payload) + " " + Requirements.title(type)).to_lower().contains(query):
+			continue
+		var item: TreeItem = %Contents.create_item(root)
+		item.set_text(0, str(entry.displayName) + ("\n" + str(entry.payload) if names[str(entry.displayName)] > 1 else ""))
+		item.set_text(1, Requirements.title(type))
+		item.set_tooltip_text(0, str(entry.payload))
+		item.set_metadata(0, str(entry.id))
+		if not ResourceLoader.exists(model.root_path() + str(entry.payload)):
+			item.set_text(1, "Missing file")
+			item.set_tooltip_text(1, "Select this item, then Locate resource in the Inspector.")
+		if entry.id == selected:
+			found = true
+			item.select(0)
+		count += 1
+	%ContentHelp.text = "Create scenes in content/ and keep source assets in assets/. Select your scene root or Resource in the Inspector to make it available in Rookframe." if model.entries().is_empty() else (
+		"No Content matches this filter." if count == 0 else "Select Content to edit its properties in the Inspector. Double-click to open its source.")
+	%OpenContent.disabled = %Contents.get_selected() == null
+	%HiddenSelection.visible = not selected.is_empty() and not found and not model.entry_by_id(selected).is_empty()
+	%ClearFilter.visible = not %Search.text.is_empty() or %Filter.selected > 0
+	_refreshing = was_refreshing
+
+
+func _inspect() -> void:
+	if _refreshing or %Contents.get_selected() == null:
+		return
+	_selection = Selection.new()
+	_selected_content_id = str(%Contents.get_selected().get_metadata(0))
+	_selection.content_id = _selected_content_id
+	EditorInterface.inspect_object(_selection)
+	%OpenContent.disabled = false
+
+
+func _open_content() -> void:
+	if %Contents.get_selected() == null:
+		return
+	var entry: Dictionary = model.entry_by_id(str(%Contents.get_selected().get_metadata(0)))
+	_open_path(model.root_path() + str(entry.get("payload", "")))
+
+
+func _source_list() -> void:
+	var previous := _source_data()
+	%Sources.clear()
+	var root: TreeItem = %Sources.create_item()
+	if model.manifest.has("implementation"):
+		var item: TreeItem = %Sources.create_item(root)
+		item.set_text(0, "Behavior")
+		item.set_tooltip_text(0, str(model.manifest.implementation.entryPoint))
+		item.set_metadata(0, model.manifest.implementation)
+		if previous == model.manifest.implementation:
+			item.select(0)
+	for presentation: Dictionary in model.manifest.get("presentations", []):
+		var item: TreeItem = %Sources.create_item(root)
+		item.set_text(0, str(presentation.entryPoint).get_file().get_basename().capitalize() + " · " + ", ".join(presentation.experiences))
+		item.set_tooltip_text(0, str(presentation.entryPoint) + "\nIdentity: " + str(presentation.id))
+		item.set_metadata(0, presentation)
+		if previous.get("id", "") == presentation.id:
+			item.select(0)
+	_source_selected()
+
+
+func _source_data() -> Dictionary:
+	return %Sources.get_selected().get_metadata(0) if %Sources.get_selected() != null else {}
+
+
+func _source_selected() -> void:
+	%OpenSource.disabled = _source_data().is_empty()
+	%EditPresentation.disabled = not _source_data().has("id") or model.busy
+
+
+func _open_source() -> void:
+	if not _source_data().is_empty():
+		_open_path(model.root_path() + str(_source_data().entryPoint))
+
+
+func _open_path(path: String) -> void:
+	if not ResourceLoader.exists(path):
+		%Status.text = "Missing source: " + path
+		return
+	if ResourceLoader.load(path) is PackedScene:
+		EditorInterface.open_scene_from_path(path)
+	else:
+		EditorInterface.edit_resource(ResourceLoader.load(path))
+
+
+func _library_status() -> void:
+	var inventory: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://.rookframe/optional-libraries.json")) if FileAccess.file_exists("res://.rookframe/optional-libraries.json") else {}
+	for library: String in ["sdk", "ui-kit"]:
+		var installed: Dictionary = inventory.get(library, {}) if inventory is Dictionary else {}
+		var label: Label = %SdkVersion if library == "sdk" else %UiVersion
+		label.text = ("SDK: " if library == "sdk" else "UI Kit: ") + (str(installed.get("version", "Installed")) if not installed.is_empty() else (
+			"Installed outside plugin" if DirAccess.dir_exists_absolute("res://rookframe/" + ("ui" if library == "ui-kit" else "sdk")) else "Not installed"))
 
 
 func install_library(library: String) -> void:
-	if _install_worker != null:
+	_run_tool("install " + library, PackedStringArray(["--library", library]), "optional_libraries.py")
+
+
+func run_command(command: String) -> void:
+	if model.busy:
 		return
-	%AuthorStatus.text = "Installing latest " + ("SDK" if library == "sdk" else "UI Kit") + "…"
+	EditorInterface.get_script_editor().save_all_scripts()
+	if not EditorInterface.get_unsaved_scenes().is_empty() and EditorInterface.get_edited_scene_root() != null and EditorInterface.save_scene() != OK:
+		%Status.text = "Save the open scene before checking or building."
+		return
+	var unsaved := EditorInterface.get_unsaved_scenes()
+	if not unsaved.is_empty():
+		%Status.text = "Save the other edited scenes before checking or building:\n" + "\n".join(unsaved)
+		return
+	if model.save():
+		_run_tool(command, PackedStringArray([command, "--godot", OS.get_executable_path()]))
+
+
+func _run_tool(job: String, arguments: PackedStringArray, script := "rookframe_authoring.py") -> void:
+	if model.busy:
+		%Status.text = "Wait for the current Package operation to finish."
+		return
+	model.busy = true
+	_job = job
+	_job_source_revision = _source_revision
+	%ProblemSources.clear()
+	%ProblemSources.hide()
+	%Status.text = job.capitalize() + "… You can keep editing scenes."
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
 	if python.is_empty():
 		python = "python" if OS.get_name() == "Windows" else "python3"
-	var args := PackedStringArray(["-X", "utf8",
-		ProjectSettings.globalize_path("res://addons/rookframe_development/optional_libraries.py"),
-		"--library", library, "--project", ProjectSettings.globalize_path("res://")])
-	_install_worker = Thread.new()
-	var error := _install_worker.start(func():
+	var args := PackedStringArray(["-X", "utf8", ProjectSettings.globalize_path("res://addons/rookframe_development/" + script)])
+	args.append_array(arguments)
+	args.append_array(PackedStringArray(["--project", ProjectSettings.globalize_path("res://")]))
+	_worker = Thread.new()
+	var error := _worker.start(func():
 		var output: Array = []
-		var code := OS.execute(python, args, output, true)
-		return {"code": code, "output": "\n".join(output)})
+		var status := OS.execute(python, args, output, true)
+		return {"status": status, "output": "\n".join(output)})
 	if error != OK:
-		_install_worker = null
-		%AuthorStatus.text = "Cannot start dependency installation: " + error_string(error)
+		model.busy = false
+		_worker = null
+		%Status.text = "Cannot start operation: " + error_string(error)
+	refresh()
+	get_tree().call_group("rookframe_content_editors", "refresh")
 
 
 func _process(_delta: float) -> void:
-	if _install_worker != null and not _install_worker.is_alive():
-		var result = _install_worker.wait_to_finish()
-		_install_worker = null
-		%AuthorStatus.text = result.output
-		print(result.output)
+	if _worker != null:
+		if _worker.is_alive():
+			return
+		_pending_result = _worker.wait_to_finish()
+		_worker = null
+	if _pending_result.is_empty():
+		return
+	var result := _pending_result
+	_pending_result = {}
+	model.busy = false
+	_logs = str(result.output)
+	print(_logs)
+	%Logs.visible = true
+	%Status.text = _job.capitalize() + (" finished." if result.status == 0 else " failed.\n" + _diagnostic(_logs))
+	if result.status != 0:
+		var expression := RegEx.new()
+		expression.compile("res://[^\\s\\\"'<>]+\\.(gd|tscn|tres|res|scn)")
+		var paths: Array[String] = []
+		for match: RegExMatch in expression.search_all(_logs):
+			var path := match.get_string()
+			if ResourceLoader.exists(path) and path not in paths:
+				paths.append(path)
+				var index: int = %ProblemSources.add_item(path.get_file())
+				%ProblemSources.set_item_metadata(index, path)
+				%ProblemSources.set_item_tooltip(index, "Double-click to open " + path)
+		%ProblemSources.visible = not paths.is_empty()
+	if result.status == 0:
+		var changed_during_check := _job_source_revision != _source_revision
+		model.reload()
+		var parsed: Variant = JSON.parse_string(_logs) if _job == "build" else {}
+		if _job == "build" and parsed is Dictionary and parsed.has("archive"):
+			%BuildResult.show()
+			%BuildPath.text = parsed.archive
+		if _job in ["init", "media"]:
+			package_changed.emit(PackedStringArray(["res://rookframe.json"]))
+		if _job == "check":
+			%Status.text = "Sources changed during the check. Save and check again before building." if changed_during_check else "Saved source checked by Rookframe. Check again after editing; builds also verify exported content."
 		EditorInterface.get_resource_filesystem().scan()
+	%Dialogs.operation_finished(result.status == 0)
+	refresh()
+	get_tree().call_group("rookframe_content_editors", "refresh")
+
+
+func _diagnostic(output: String) -> String:
+	for raw: String in output.split("\n", false):
+		var line := raw.strip_edges()
+		var start := line.find("{")
+		if start >= 0:
+			var value: Variant = JSON.parse_string(line.substr(start))
+			if value is Dictionary and value.has("diagnostic"):
+				return str(value.diagnostic)
+		if line.contains(":") and not line.begins_with("Godot Engine") and not line.begins_with("at:"):
+			return line
+	return output.strip_edges().left(600) + "\nOpen operation details for the full output."
 
 
 func _exit_tree() -> void:
-	if _install_worker != null:
-		_install_worker.wait_to_finish()
-		_install_worker = null
-
-
-func _slug(value: String) -> String:
-	var result := ""
-	for character in value.to_lower():
-		result += character if character in "abcdefghijklmnopqrstuvwxyz0123456789_-" else "-"
-	result = result.strip_edges().trim_prefix("-").trim_suffix("-")
-	if result.is_empty() or result[0] not in "abcdefghijklmnopqrstuvwxyz":
-		result = "entry-" + result
-	return result
-
-
-func _run_tool(arguments: PackedStringArray) -> bool:
-	var python := OS.get_environment("ROOKFRAME_PYTHON")
-	if python.is_empty():
-		python = "python" if OS.get_name() == "Windows" else "python3"
-	var args := PackedStringArray(["-X", "utf8",
-		ProjectSettings.globalize_path("res://addons/rookframe_development/rookframe_authoring.py")])
-	args.append_array(arguments)
-	args.append_array(PackedStringArray(["--project", ProjectSettings.globalize_path("res://")]))
-	var output: Array = []
-	var code := OS.execute(python, args, output, true)
-	%AuthorStatus.text = "\n".join(output)
-	if code != OK:
-		%AuthorStatus.grab_focus()
-		return false
-	EditorInterface.get_resource_filesystem().scan()
-	refresh()
-	var result = JSON.parse_string("\n".join(output))
-	package_changed.emit(PackedStringArray(result.get("changedPaths", [])) if result is Dictionary else PackedStringArray())
-	return true
-
-
-func _initialize() -> void:
-	if %PackageName.text.strip_edges().is_empty():
-		%AuthorStatus.text = "Enter a Package name."
-		%PackageName.grab_focus()
-		return
-	var form: int = %PackageKind.selected
-	var args := PackedStringArray(["init", "--name", %PackageName.text.strip_edges(),
-		"--kind", "system-extension" if form == 2 else "optional"])
-	args.append("--content-only" if form == 1 else "--ui")
-	if _run_tool(args):
-		%AuthorStatus.text = "Package created. Add models or scenes below the Package directory, then register them."
-
-
-func _select_scene(path: String) -> void:
-	%ScenePath.text = path
-	if %EntryName.text.is_empty():
-		%EntryName.text = path.get_file().get_basename().capitalize()
-		%EntryId.text = _slug(%EntryName.text)
-
-
-func _update_help() -> void:
-	var kind: String = TYPES[%EntryType.selected]
-	%PresentationRow.visible = kind not in TYPES.slice(0, 4)
-	%EntryHelp.text = {
-		"prop": "A Node3D scene with PropCollision/CollisionShape3D. Use Prepare model to add an editable box collider.",
-		"wall_style": "A wall sample with a mesh named Surface; +X along the wall, +Y up. Prepare model adds the authored scale and sample width.",
-		"surface_finish": "A floor/ceiling sample with a mesh named Surface in the XZ plane. Prepare model adds the appearance metadata.",
-		"miniature": "An imported model or Node3D scene. It appears in Miniatures.",
-	}.get(kind, "A Control scene. Its attached scripts and signals work normally. Rookframe registers it in the selected slot.")
-	%PrepareModel.visible = kind in ["prop", "wall_style", "surface_finish"]
-
-
-func _register() -> void:
-	var path: String = %ScenePath.text.strip_edges()
-	var edited := EditorInterface.get_edited_scene_root()
-	# save_all_scenes() stops the running game. Save only the selected open scene
-	# through the normal editor operation so the Development World stays alive.
-	if edited != null and edited.scene_file_path == path:
-		var saved := EditorInterface.save_scene()
-		if saved != OK:
-			%AuthorStatus.text = "Save the scene before registering it: " + error_string(saved)
-			return
-	EditorInterface.get_script_editor().save_all_scripts()
-	var kind: String = TYPES[%EntryType.selected]
-	if not ResourceLoader.exists(path):
-		%AuthorStatus.text = "Choose a saved, imported scene."
-		return
-	var packed = ResourceLoader.load(path)
-	if not packed is PackedScene:
-		%AuthorStatus.text = "The selected file is not a scene."
-		return
-	var scene: Node = packed.instantiate()
-	var valid := scene is Node3D if kind in TYPES.slice(0, 4) else scene is Control
-	if kind == "prop":
-		var collider := scene.get_node_or_null("PropCollision/CollisionShape3D") as CollisionShape3D
-		valid = valid and collider != null and collider.shape != null
-	if kind in ["wall_style", "surface_finish"]:
-		var surfaces := scene.find_children("Surface", "MeshInstance3D", true, false)
-		var surface: MeshInstance3D = null if surfaces.is_empty() else surfaces[0] as MeshInstance3D
-		var span: float = scene.get_meta("authored_sample_span", 0.0)
-		valid = valid and scene.get_meta("content_kind", "") == kind and scene.get_meta("authored_units_per_world_unit", 0.0) == 1.0 and is_finite(span) and span >= 0.05 and span <= 100.0
-		valid = valid and surface != null and surface.mesh != null and surface.mesh.get_surface_count() == 1 and surface.get_active_material(0) is BaseMaterial3D
-		if kind == "surface_finish":
-			valid = valid and scene.get_meta("supports_floor", false) and scene.get_meta("supports_ceiling", false)
-	scene.free()
-	if not valid:
-		%AuthorStatus.text = "The scene needs the structure described above. Prepare the model or edit its scene first."
-		return
-	var args := PackedStringArray(["register", "--scene", path,
-		"--entry-id", %EntryId.text.strip_edges(), "--name", %EntryName.text.strip_edges(), "--entry-type", kind])
-	if %Presentation.item_count > 0 and kind not in TYPES.slice(0, 4):
-		args.append_array(PackedStringArray(["--presentation", %Presentation.get_item_text(%Presentation.selected)]))
-	if _run_tool(args):
-		%AuthorStatus.text = "Registered. The running Development World receives this change through Godot's importer."
-
-
-func _prepare_model() -> void:
-	var path: String = %ScenePath.text.strip_edges()
-	var kind: String = TYPES[%EntryType.selected]
-	var packed = ResourceLoader.load(path)
-	if not packed is PackedScene:
-		%AuthorStatus.text = "Choose an imported model or a saved Node3D scene."
-		return
-	var model: Node = packed.instantiate()
-	if not model is Node3D:
-		model.free()
-		%AuthorStatus.text = "This operation requires a Node3D scene."
-		return
-	var root := Node3D.new()
-	root.name = "Content"
-	model.name = "Surface" if model is MeshInstance3D and model.name == "Surface" else "Model"
-	root.add_child(model)
-	model.owner = root
-	var meshes: Array[Node] = model.find_children("*", "MeshInstance3D", true, false)
-	if model is MeshInstance3D:
-		meshes.push_front(model)
-	var bounds := AABB()
-	var first := true
-	var surface_span := 0.0
-	for mesh: MeshInstance3D in meshes:
-		var pose := mesh.transform
-		var parent := mesh.get_parent()
-		while parent != root and parent is Node3D:
-			pose = parent.transform * pose
-			parent = parent.get_parent()
-		var box: AABB = pose * mesh.get_aabb()
-		if mesh.name == "Surface":
-			surface_span = box.size.x
-		bounds = box if first else bounds.merge(box)
-		first = false
-	if first or bounds.size.length_squared() == 0.0:
-		root.free()
-		%AuthorStatus.text = "The model has no usable mesh."
-		return
-	if kind == "prop":
-		var body := StaticBody3D.new()
-		body.name = "PropCollision"
-		root.add_child(body)
-		body.owner = root
-		var collider := CollisionShape3D.new()
-		collider.name = "CollisionShape3D"
-		collider.shape = BoxShape3D.new()
-		collider.shape.size = bounds.size.max(Vector3(0.01, 0.01, 0.01))
-		collider.position = bounds.get_center()
-		body.add_child(collider)
-		collider.owner = root
-	elif kind in ["wall_style", "surface_finish"]:
-		if model.find_children("Surface", "MeshInstance3D", true, false).is_empty() and not (model is MeshInstance3D and model.name == "Surface"):
-			root.free()
-			%AuthorStatus.text = "Name the appearance's main mesh Surface in the source model or an authored scene, then prepare again."
-			return
-		root.set_meta("content_kind", kind)
-		root.set_meta("authored_units_per_world_unit", 1.0)
-		root.set_meta("authored_sample_span", surface_span)
-		root.set_meta("supports_floor", kind == "surface_finish")
-		root.set_meta("supports_ceiling", kind == "surface_finish")
-	var manifest = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json"))
-	if not manifest is Dictionary or not manifest.get("id") is String:
-		root.free()
-		%AuthorStatus.text = "Correct rookframe.json before preparing a model."
-		return
-	var prefix := "res://rookframe/packages/" + str(manifest.id) + "/"
-	if not path.begins_with(prefix):
-		root.free()
-		%AuthorStatus.text = "Move the source model into the Package directory first."
-		return
-	var target := prefix + "content/" + _slug(%EntryId.text) + ".tscn"
-	if FileAccess.file_exists(target):
-		root.free()
-		%AuthorStatus.text = "That scene already exists. Choose a new ID or edit the existing scene."
-		return
-	DirAccess.make_dir_recursive_absolute(target.get_base_dir())
-	var wrapper := PackedScene.new()
-	var result := wrapper.pack(root)
-	if result == OK:
-		result = ResourceSaver.save(wrapper, target)
-	root.free()
-	if result != OK:
-		%AuthorStatus.text = "Cannot save the prepared scene: " + error_string(result)
-		return
-	EditorInterface.get_resource_filesystem().scan()
-	%ScenePath.text = target
-	EditorInterface.open_scene_from_path(target)
-	%AuthorStatus.text = "Scene prepared. Inspect its scale and collision, then register it. The imported model remains linked."
+	if _worker != null:
+		_pending_result = _worker.wait_to_finish()
+		_worker = null

@@ -2,15 +2,16 @@
 import json
 
 
-def presentation(package_id: str) -> str:
+def presentation(package_id: str, scene: str = "ui/window.tscn") -> str:
     root = f"res://rookframe/packages/{package_id}"
     return f'''extends Control
 
-const BUTTON = preload("{root}/ui/window_button.tscn")
-const WINDOW = preload("{root}/ui/window.tscn")
+const VIEW = preload("{root}/{scene}")
 
-func compose_presentation(host: Object) -> Control:
-\thost.RegisterWindowButton("left", BUTTON, WINDOW)
+# Author this Control scene normally. The optional SDK provides typed
+# Rookframe windows, Rails and Actor workflows when you need them.
+func compose_presentation(_host: Object) -> Control:
+\tadd_child(VIEW.instantiate())
 \treturn self
 '''
 
