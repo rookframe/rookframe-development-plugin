@@ -38,11 +38,11 @@ def host_platform() -> str:
     return {"Windows": "windows", "Darwin": "macos", "Linux": "linux"}[platform.system()]
 
 
-def native_library(target: str, architecture: str) -> str:
+def native_library(target: str, architecture: str, configuration: str = "release") -> str:
     if target == "macos":
-        return "libwebrtc_native.macos.template_release.universal.framework"
+        return f"libwebrtc_native.macos.template_{configuration}.universal.framework"
     suffix = {"windows": "dll", "linux": "so"}[target]
-    return f"libwebrtc_native.{target}.template_release.{architecture}.{suffix}"
+    return f"libwebrtc_native.{target}.template_{configuration}.{architecture}.{suffix}"
 
 
 def member(root: Path, name: str) -> Path:
@@ -71,16 +71,24 @@ def atomic_copy(source: Path, destination: Path) -> None:
 def prepare(project: Path, application: Path, godot_version: str, architecture: str) -> dict:
     project = project.resolve()
     config_path = project / ".rookframe/development.json"
-    manifest = json.loads((project / "rookframe.json").read_text(encoding="utf-8"))
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("schema") != CONFIG_SCHEMA or not str(config.get("worldName", "")).strip():
         raise ValueError("DEVELOPMENT.CONFIG: Save a named development World in the Rookframe dock.")
-    if config.get("developPackage") != manifest["id"]:
-        raise ValueError("DEVELOPMENT.IDENTITY: Save settings again after changing the Package identity.")
-    if manifest["kind"] == "optional" and not config.get("systemManifest"):
-        raise ValueError("DEVELOPMENT.SYSTEM: An optional Package needs a published System Manifest URL.")
-    if manifest["kind"] == "system-extension" and config.get("systemManifest"):
-        raise ValueError("DEVELOPMENT.SYSTEM: The editable System already supplies this World's System.")
+    if config.get("developPackage") is not None:
+        if config.get("sourceManifest", "res://rookframe.json") != "res://rookframe.json":
+            raise ValueError("DEVELOPMENT.CONFIG: Select the project's rookframe.json Package Manifest.")
+        manifest = json.loads((project / "rookframe.json").read_text(encoding="utf-8"))
+        if config["developPackage"] != manifest["id"]:
+            raise ValueError("DEVELOPMENT.IDENTITY: Save settings again after changing the Package identity.")
+        if manifest["kind"] == "optional" and not config.get("systemManifest"):
+            raise ValueError("DEVELOPMENT.SYSTEM: An optional Package needs a published System Manifest URL.")
+        if manifest["kind"] == "system-extension" and config.get("systemManifest"):
+            raise ValueError("DEVELOPMENT.SYSTEM: The editable System already supplies this World's System.")
+    else:
+        if config.get("sourceManifest") is not None:
+            raise ValueError("DEVELOPMENT.CONFIG: A source Manifest requires an Editable Package.")
+        if not config.get("systemManifest"):
+            raise ValueError("DEVELOPMENT.SYSTEM: Choose a published System Manifest URL to run this World.")
     if list(project.glob("*.csproj")) or list(project.glob("*.sln")):
         raise ValueError("DEVELOPMENT.PROJECT: Use a GDScript Package project without a host C# build project.")
     application = application.resolve()
@@ -96,16 +104,18 @@ def prepare(project: Path, application: Path, godot_version: str, architecture: 
     packs = list(resources.glob("*.pck"))
     platform_id = "linuxbsd" if target == "linux" else target
     managed = resources / f"data_Rookframe_{platform_id}_{architecture}"
-    native_name = native_library(target, architecture)
     native_root = application.parent.parent / "Frameworks" if target == "macos" else resources
-    native = native_root / native_name
-    if len(packs) != 1 or not (managed / "Rookframe.dll").is_file() or not native.exists():
+    natives = [native_root / native_library(target, architecture, configuration)
+               for configuration in ("debug", "release")]
+    natives = [native for native in natives if native.exists()]
+    if len(packs) != 1 or not (managed / "Rookframe.dll").is_file() or not natives:
         raise ValueError("DEVELOPMENT.ROOKFRAME: The installed application is incomplete or does not match this editor's architecture.")
     ownership = project / ".rookframe/installed-application.json"
     previous = json.loads(ownership.read_text(encoding="utf-8")) if ownership.exists() else {}
     inputs = [(source, MANAGED_ROOT + source.relative_to(managed).as_posix())
               for source in managed.rglob("*") if source.is_file()]
-    native_files = list(native.rglob("*")) if native.is_dir() else [native]
+    native_files = [source for native in natives
+                    for source in (list(native.rglob("*")) if native.is_dir() else [native])]
     inputs.extend((source, NATIVE_ROOT + source.relative_to(native_root).as_posix())
                   for source in native_files if source.is_file())
     checked = []

@@ -1,8 +1,11 @@
 # Repository boundary
 
 This repository owns the Godot editor plugin and Development World preparation.
-Use the pinned public Rookframe SDK source and its Package commands. Package
-authors never generate or rebuild the SDK.
+The plugin owns Package authoring commands. Every Package kind can be created,
+registered, checked and built with stock Godot and the installed application.
+The public SDK source and UI Kit are independent optional helper libraries;
+install or update either only through an explicit author action. Native scaffolds
+use ordinary Godot nodes and the application's domain capabilities.
 The Rookframe application owns the C# API, Package checks and ordinary application releases.
 Prepare Development Worlds from the installed application; do not require a
 separate development-runtime distribution.
