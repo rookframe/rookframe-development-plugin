@@ -59,10 +59,9 @@ does not roll back or delete GitHub assets.
 
 ## Cover images and videos
 
-In the Package tab, **Choose cover** sets the Package's cover image. **Add image
-or video** adds a gallery item with the entered caption. Remove or reorder items
-before building. Systems use the same media contract; Rookframe can use their
-cover as the default image when creating a game.
+Use the authoring CLI to attach a cover image or gallery item before building.
+Systems use the same media contract; Rookframe can use their cover as the default
+image when creating a game. The commands below update the Package Manifest.
 
 ```sh
 python3 addons/rookframe_development/rookframe_authoring.py media --project . --role cover --file /path/to/cover.png

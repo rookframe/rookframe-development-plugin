@@ -19,18 +19,20 @@ func _ready() -> void:
 	%RuntimePicker.file_selected.connect(_select_application)
 	%Runtime.text_changed.connect(func(path: String): %Runtime.tooltip_text = path)
 	%Prepare.pressed.connect(_prepare)
-	%Run.pressed.connect(_run)
-	%Stop.pressed.connect(EditorInterface.stop_playing_scene)
-	%EditSetup.toggled.connect(func(open: bool): %Setup.visible = open)
+	%Configure.pressed.connect(show_configuration)
+	%WorldSettings.close_requested.connect(%WorldSettings.hide)
+	%RuntimePicker.reparent(%WorldSettings)
 	%Restart.confirmed.connect(func(): EditorInterface.restart_editor(true))
 	refresh_package()
-	%UsePackage.toggled.connect(func(_enabled: bool): _invalidate("Editable Package selection changed."); _system_source())
+	%UsePackage.toggled.connect(func(_enabled: bool): _prepared = false; refresh_package())
 	if FileAccess.file_exists(CONFIG):
+		%Configure.text = "Configure World…"
 		var config = JSON.parse_string(FileAccess.get_file_as_string(CONFIG))
 		if config is Dictionary:
 			%UsePackage.button_pressed = config.get("developPackage") != null
 			_select_application(config.get("rookframe", ""))
 			%WorldName.text = config.get("worldName", "Package development")
+			%WorldSummary.text = %WorldName.text
 			%SystemManifest.text = config.get("systemManifest", "") if config.get("systemManifest") != null else ""
 			%Packages.text = "\n".join(config.get("packageManifests", []))
 			if DisplayServer.get_name() != "headless":
@@ -38,23 +40,13 @@ func _ready() -> void:
 	if %Runtime.text.is_empty():
 		_select_application(_installed_rookframe())
 	for field in [%Runtime, %WorldName, %SystemManifest]:
-		field.text_changed.connect(func(_value: String): _invalidate("Application, World or System settings changed."))
-	%Packages.text_changed.connect(func(): _invalidate("Selected Package URLs changed."))
-	_system_source()
+		field.text_changed.connect(func(_value: String): _prepared = false)
+	%Packages.text_changed.connect(func(): _prepared = false)
 
 
-func _invalidate(reason: String) -> void:
-	_prepared = false
-	%Status.text = reason + " Stop the World if it is running, then Save and prepare."
-
-
-func _system_source() -> void:
-	var manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json")) if FileAccess.file_exists("res://rookframe.json") else {}
-	var source: bool = manifest is Dictionary and manifest.get("kind") == "system-extension" and %UsePackage.button_pressed
-	%SystemManifest.visible = not source
-	%Setup.get_node("SystemLabel").visible = not source
-	if source:
-		%PackageStatus.text = "This Package supplies the System. Author its rules and Actor workflows in its source; the starter is a skeleton."
+func show_configuration() -> void:
+	refresh_package()
+	%WorldSettings.popup_centered_clamped(Vector2i(620, 570) * EditorInterface.get_editor_scale(), 0.85)
 
 
 func refresh_package() -> void:
@@ -66,7 +58,10 @@ func refresh_package() -> void:
 	elif previously_disabled or not FileAccess.file_exists(CONFIG):
 		%UsePackage.button_pressed = true
 	%PackageStatus.text = "Changes to the selected Package reload while the World runs." if exists else "No Package in this project. Choose a published System below to run a World."
-	_system_source()
+	var manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://rookframe.json")) if exists else null
+	var own_system: bool = manifest is Dictionary and manifest.get("kind") == "system-extension" and %UsePackage.button_pressed
+	%SystemManifest.visible = not own_system
+	%SystemLabel.visible = not own_system
 
 
 func _select_application(path: String) -> void:
@@ -122,6 +117,9 @@ func _prepare() -> void:
 		return
 	file.store_string(JSON.stringify(config, "\t") + "\n")
 	file.close()
+	%WorldSummary.text = config.worldName
+	%Configure.text = "Configure World…"
+	%WorldSettings.hide()
 	configuration_saved.emit()
 	%Status.text = "Preparing the project with your installed Rookframe…"
 	_set_preparing(true)
@@ -146,6 +144,7 @@ func _prepare() -> void:
 
 
 func _process(_delta: float) -> void:
+	%ConfigStatus.text = %Status.text
 	if _worker != null:
 		if _worker.is_alive():
 			return
@@ -157,7 +156,9 @@ func _process(_delta: float) -> void:
 	_pending_result = {}
 	_set_preparing(false)
 	if result.status != 0:
-		%Status.text = result.output
+		%Status.text = "Preparation failed. Review the error and configure the World."
+		%PreparationError.dialog_text = result.output
+		%PreparationError.popup_centered_clamped(Vector2i(650, 400) * EditorInterface.get_editor_scale(), 0.85)
 		push_error(result.output)
 		return
 	var settings := EditorInterface.get_editor_settings()
@@ -180,8 +181,7 @@ func _process(_delta: float) -> void:
 		%Restart.popup_centered()
 		return
 	_prepared = true
-	%Status.text = %WorldName.text + "\nReady for local development. Run the World; Godot's Debugger shows errors."
-	%EditSetup.button_pressed = false
+	%Status.text = "Ready. Use Play (F5)."
 	print(result.output)
 
 
@@ -196,7 +196,7 @@ func _run() -> void:
 func _set_preparing(active: bool) -> void:
 	%Prepare.disabled = active
 	%Browse.disabled = active
-	%Run.disabled = active
+	%Configure.disabled = active
 	%UsePackage.disabled = active or not FileAccess.file_exists("res://rookframe.json")
 	for field in [%Runtime, %WorldName, %SystemManifest, %Packages]:
 		field.editable = not active

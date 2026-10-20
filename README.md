@@ -19,12 +19,12 @@ then enable **Rookframe Development** in **Project Settings → Plugins**.
 The ZIP contains only `addons/rookframe_development/`. Running a World does not
 require gd-plug, Git, a local SDK, the UI Kit or a Package in the project.
 
-1. Open the dock's **Development** tab and choose the installed Rookframe executable.
+1. In the **Rookframe** dock, choose **Set up World…** and select the installed Rookframe executable.
 2. Keep or enter a Development World name and supply a public HTTPS System Manifest
    URL. Add other published Package Manifest URLs only when needed.
-3. Choose **Save and prepare**, then **Save and reopen editor** if requested.
-4. Wait for preparation and imports to finish, then choose **Run development World**
-   or use normal Play. Reuse the same World name to retain its data.
+3. Choose **Save and prepare World**, then **Save and reopen editor** if requested.
+4. Wait for **Ready**, then use normal Godot **Play (F5)** and **Stop (F8)**.
+   Reuse the same World name to retain its data.
 
 Godot loads the installed application's SDK and UI resources when running the
 World. Local authoring copies are optional helpers.
@@ -35,10 +35,9 @@ All Package kinds can be created, registered, checked and built without a local
 SDK or UI Kit. The plugin owns authoring commands; the installed Rookframe
 application performs production checks. Initial scenes use ordinary Godot nodes.
 
-In **Package → Optional libraries**, download the SDK or UI Kit independently.
-Their installed versions are shown beside each action. Alternatively, under
-**Project > Tools**, choose **Rookframe: Install latest SDK** or
-**Rookframe: Install latest UI Kit** when you want those helpers. Each action
+Under **Package settings → Optional libraries…**, choose the SDK or UI Kit
+download when you want those helpers. The same actions remain under
+**Project → Tools**. Each action
 installs only the selected library over HTTPS, without gd-plug or manual Git
 setup. Latest means the newest published release, including prereleases; the
 result names the installed version. Updates preserve edited library files and
@@ -63,67 +62,64 @@ preserving an author-selected main scene.
 
 ## Author Packages
 
-Choose **Create Package** in the **Package** tab:
+Choose **Create Package…** in the Rookframe dock:
 
-- **Content pack** prepares folders for reusable Miniatures, Props, Wall Styles,
-  Surface Finishes and Themes.
-- **Extension** adds an author-owned behavior script for optional World features.
-- **System Extension** prepares the entry point for your game's rules and Actor
-  workflows. This is a skeleton; author the actual game behavior yourself.
+- **Content pack** prepares folders for scenes and Resources without code.
+- **Extension** adds behavior to an existing World.
+- **System** defines a game's Actors, rules and shared World data.
 
-Extensions and Systems can include a starter Control scene and Presentation.
-None of these choices installs the SDK or UI Kit.
+Extension and System creation provide an ordinary GDScript behavior entry point.
+An editable UI window is an explicit optional choice. Neither local library is required.
+Creation opens a short authoring guide and selects the content folder or opens
+the behavior script. The guide remains available from the Package settings menu.
 
-Use **Open folder** to find `rookframe/packages/<package-id>/`. Import source
-assets into `assets/` using Godot, and save your scenes and Resources in `content/`.
-The folders are suggestions; all Package resources must remain in its namespace.
-Author meshes, materials and collision in Godot's normal tools.
+Author under `rookframe/packages/<package-id>/`: keep models and images in
+`assets/`, scenes and Resources in `content/`, behavior in `logic/`, and UI in
+`ui/`. Use Godot's ordinary FileSystem, Scene tree and editors. Imported models
+become authored inherited scenes; author collision shapes yourself.
 
-Select the scene root or Resource, then choose **Make available in Rookframe**
-in the Inspector. Choose a Content type, read its requirements and enter its
-display name. **Add to Package** creates its identity once. The Package list
-selects these same properties; names and previews always belong to the selected
-item. Use a native Theme Resource for Theme Content. Wall and finish settings
-appear on their scene root; the plugin never generates their geometry or colliders.
+Select a scene root (or a Theme/System Resource), then open the **Rookframe Content**
+dock beside the Inspector. It follows the object being inspected and names the
+source you are editing. Choose its explained type and **Add to Package**. The
+name and optional Library thumbnail belong to that source. Use **Choose image…**
+to assign an image from the Package; **Clear** removes only that assignment.
+Godot properties stay in the regular Inspector. Identity is automatic; it stays stable
+through property edits and native FileSystem moves. Save normally with Godot.
+**Save As** makes a separate source and leaves the original Content declaration
+intact. Add the copy explicitly if it should also be Content.
 
-Save Package properties with Godot's normal Save or the dock's **Save** button.
-Undo/Redo preserves Content identities. Moving files through Godot updates their
-declarations; copied scenes begin undeclared. **Remove from Package** leaves files
-in place. Missing files can be located without changing identity. Conflicting
-external Manifest edits require copying the draft or reloading; unsaved Package
-drafts are also retained under `.godot/` for recovery after closing.
+Declared types are fixed for that identity. Removing a declaration leaves its
+source file and warns about existing World references. Undo restores the same
+identity; adding again creates a new one. System Resources require the target
+System's UUID, contract, content type and compatible version expression.
 
-**Behavior and UI** opens your actual source. Add a Presentation independently of
-behavior, then choose its device experiences. Reassigning an experience previews
-the affected declarations and saves them together. Existing authored scripts are
-never regenerated. Source changes and richer UI composition use ordinary Godot
-scenes, Resources and scripts; the optional SDK supplies Rookframe domain APIs.
-The API reference links from the dock identify revision requirements. System
-authors also get a direct Actor and System data guide. Presentation list labels
-follow their source filenames; changing coverage preserves their identity.
+In the dock's **Package settings** menu, open **Package settings… → Code & UI**
+to assign Extension/System entry scripts through native GDScript resource pickers.
+Click a script to open it; finish settings with **Save** or **Cancel** to return
+to editing. **New UI…** creates an ordinary editable scene and entry script, with
+explicit device coverage. Reassigning devices previews the affected
+assignments. A Content pack can opt into these tools through **Advanced → Add
+code or UI to this Package…**.
+Missing Content sources can be repaired in the settings' **Missing sources** tab.
 
-**Details** edits Package-wide name and compatibility while keeping identity
-read-only. **Release details** edits the version and optional cover/gallery.
-Captions apply to the selected media item. See [publication instructions](PUBLICATION.md)
-for the separate publication workflow.
-
-**Project → Tools → Rookframe: Check Package** validates the author project.
-**Build Package** produces a local archive and offers **Show archive**. These
-background commands use the installed application as the verifier. Save other
-modified scene tabs before checking or building; neither action publishes files.
+**Check** validates saved sources; **Build…** produces a checked archive using the
+installed application. Save unfinished scenes first. Checking does not stop a
+running World. Validation results link sources to their normal Godot editor.
+Package publication artwork remains available through the media CLI in
+[publication instructions](PUBLICATION.md).
 
 ## Run a Development World
 
 1. Open the author project in the stock Godot .NET editor matching the installed
    Rookframe application's engine, OS and architecture.
-2. Open the **Development** tab. Select the installed Rookframe executable,
+2. Choose **Set up World…** or **Configure World…**. Select the installed Rookframe executable,
    the existing World name and published Package Manifest URLs. To live-edit
    a Package, enable **Edit this project's Package**. It is selected by default
    for existing Package projects and saved selections are preserved. An editable
    optional Package also needs a published System Manifest URL. An editable
    System Extension supplies the System itself.
-3. Choose **Save and prepare** and reopen the editor once if requested.
-4. Run the World. Save scripts/scenes or reimport models in the same session.
+3. Choose **Save and prepare World** and reopen the editor once if requested.
+4. Use normal **Play (F5)**. Save scripts/scenes or reimport models in the same session.
    Use Godot's Debugger and Output to inspect errors.
 
 Reuse the World name to preserve its data. SDK Edition, Package identity,
@@ -150,12 +146,11 @@ python tools/build-plugin.py --output /path/to/rookframe-development.zip
 The addon and its Package tools have no SDK or UI Kit dependency. Run:
 
 ```sh
-ROOKFRAME_GODOT=/path/to/godot python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 godot --headless --editor --path . --quit-after 30
 ```
 
-On PowerShell, set `$env:ROOKFRAME_GODOT` before running Python. Use the actual
-Godot .NET executable path so the native resource test runs. Open this project in the editor to
+Use the actual Godot .NET executable path. Open this project in the editor to
 inspect the dock. For World behavior, use the same external author project,
 installed application and saved World throughout the change. Keep SDK dependency
 upgrades explicit and verify before tagging a release; never move released tags.

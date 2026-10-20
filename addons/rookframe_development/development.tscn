@@ -1,7 +1,5 @@
 [gd_scene load_steps=3 format=3]
-
 [ext_resource type="Script" path="res://addons/rookframe_development/development.gd" id="1"]
-
 [ext_resource type="PackedScene" path="res://addons/rookframe_development/authoring.tscn" id="author"]
 
 [node name="Rookframe" type="EditorDock"]
@@ -9,114 +7,110 @@ title = "Rookframe"
 default_slot = 4
 layout_key = "rookframe_development"
 
-[node name="Tabs" type="TabContainer" parent="."]
-
-[node name="Package" type="ScrollContainer" parent="Tabs"]
-horizontal_scroll_mode = 0
-
-[node name="Package" parent="Tabs/Package" instance=ExtResource("author")]
-size_flags_horizontal = 3
-
-[node name="Development" type="ScrollContainer" parent="Tabs"]
-horizontal_scroll_mode = 0
-
-[node name="Content" type="VBoxContainer" parent="Tabs/Development"]
-custom_minimum_size = Vector2(270, 0)
-size_flags_horizontal = 3
+[node name="Margin" type="MarginContainer" parent="."]
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+[node name="Body" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 16
+[node name="Package" parent="Margin/Body" instance=ExtResource("author")]
+[node name="Separator" type="HSeparator" parent="Margin/Body"]
+[node name="Development" type="VBoxContainer" parent="Margin/Body"]
 script = ExtResource("1")
-
-[node name="Title" type="Label" parent="Tabs/Development/Content"]
+theme_override_constants/separation = 8
+[node name="Title" type="Label" parent="Margin/Body/Development"]
 text = "Development World"
-
-[node name="Explanation" type="Label" parent="Tabs/Development/Content"]
-text = "Run a local World using your installed Rookframe application. Networking is disabled."
-autowrap_mode = 2
-
-[node name="Actions" type="HBoxContainer" parent="Tabs/Development/Content"]
-
-[node name="Run" type="Button" parent="Tabs/Development/Content/Actions"]
+[node name="WorldSummary" type="Label" parent="Margin/Body/Development"]
 unique_name_in_owner = true
-size_flags_horizontal = 3
-text = "Run development World"
-
-[node name="Stop" type="Button" parent="Tabs/Development/Content/Actions"]
+text = "Not configured"
+text_overrun_behavior = 3
+[node name="Configure" type="Button" parent="Margin/Body/Development"]
 unique_name_in_owner = true
-text = "Stop"
-
-[node name="Status" type="Label" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-text = "Choose your installed Rookframe application."
-autowrap_mode = 2
-
-[node name="EditSetup" type="Button" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-text = "Edit setup"
-toggle_mode = true
-button_pressed = true
-
-[node name="Setup" type="VBoxContainer" parent="Tabs/Development/Content"]
-unique_name_in_owner = true
-
-[node name="UsePackage" type="CheckButton" parent="Tabs/Development/Content/Setup"]
-unique_name_in_owner = true
-text = "Edit this project's Package"
-disabled = true
-
-[node name="PackageStatus" type="Label" parent="Tabs/Development/Content/Setup"]
+text = "Set up World…"
+[node name="Status" type="Label" parent="Margin/Body/Development"]
 unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="RuntimeLabel" type="Label" parent="Tabs/Development/Content/Setup"]
-text = "Rookframe application"
-
-[node name="RuntimeRow" type="HBoxContainer" parent="Tabs/Development/Content/Setup"]
-
-[node name="Runtime" type="LineEdit" parent="Tabs/Development/Content/Setup/RuntimeRow"]
+[node name="WorldSettings" type="Window" parent="Margin/Body/Development"]
+unique_name_in_owner = true
+title = "Development World"
+size = Vector2i(620, 570)
+transient = true
+exclusive = true
+visible = false
+wrap_controls = false
+[node name="Margin" type="MarginContainer" parent="Margin/Body/Development/WorldSettings"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
+[node name="Scroll" type="ScrollContainer" parent="Margin/Body/Development/WorldSettings/Margin"]
+horizontal_scroll_mode = 0
+[node name="Form" type="VBoxContainer" parent="Margin/Body/Development/WorldSettings/Margin/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+[node name="WorldLabel" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+text = "World name"
+[node name="WorldName" type="LineEdit" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+unique_name_in_owner = true
+text = "Package development"
+[node name="WorldHelp" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+text = "Reuse this name to keep your saved World."
+[node name="RuntimeLabel" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+text = "Installed Rookframe application"
+[node name="RuntimeRow" type="HBoxContainer" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+[node name="Runtime" type="LineEdit" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form/RuntimeRow"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
-placeholder_text = "Installed Rookframe executable"
-
-[node name="Browse" type="Button" parent="Tabs/Development/Content/Setup/RuntimeRow"]
+placeholder_text = "Rookframe executable"
+[node name="Browse" type="Button" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form/RuntimeRow"]
 unique_name_in_owner = true
-text = "Browse…"
-
-[node name="WorldLabel" type="Label" parent="Tabs/Development/Content/Setup"]
-text = "Development World name"
-
-[node name="WorldName" type="LineEdit" parent="Tabs/Development/Content/Setup"]
+text = "Choose…"
+[node name="UsePackage" type="CheckBox" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
 unique_name_in_owner = true
-text = "Development World"
-
-[node name="SystemLabel" type="Label" parent="Tabs/Development/Content/Setup"]
-text = "System Manifest URL"
-autowrap_mode = 2
-
-[node name="SystemManifest" type="LineEdit" parent="Tabs/Development/Content/Setup"]
+text = "Edit this project's Package"
+disabled = true
+[node name="PackageStatus" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+unique_name_in_owner = true
+autowrap_mode = 3
+[node name="SystemLabel" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+unique_name_in_owner = true
+text = "Published System Manifest URL"
+[node name="SystemManifest" type="LineEdit" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
 unique_name_in_owner = true
 placeholder_text = "https://…"
-
-[node name="PackagesLabel" type="Label" parent="Tabs/Development/Content/Setup"]
-text = "Other Package Manifest URLs (one per line)"
-autowrap_mode = 2
-
-[node name="Packages" type="TextEdit" parent="Tabs/Development/Content/Setup"]
+[node name="PackagesLabel" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
+text = "Other published Packages (optional, one Manifest URL per line)"
+autowrap_mode = 3
+[node name="Packages" type="TextEdit" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 100)
+custom_minimum_size = Vector2(0, 90)
+size_flags_vertical = 3
 placeholder_text = "https://…"
-
-[node name="Prepare" type="Button" parent="Tabs/Development/Content/Setup"]
+[node name="Prepare" type="Button" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
 unique_name_in_owner = true
-text = "Save and prepare"
+text = "Save and prepare World"
 
-[node name="RuntimePicker" type="FileDialog" parent="Tabs/Development/Content"]
+[node name="ConfigStatus" type="Label" parent="Margin/Body/Development/WorldSettings/Margin/Scroll/Form"]
 unique_name_in_owner = true
-title = "Choose Rookframe application"
+autowrap_mode = 3
+
+[node name="PreparationError" type="AcceptDialog" parent="Margin/Body/Development"]
+unique_name_in_owner = true
+title = "World preparation failed"
+dialog_autowrap = true
+
+[node name="RuntimePicker" type="FileDialog" parent="Margin/Body/Development"]
+unique_name_in_owner = true
+title = "Choose installed Rookframe"
 file_mode = 0
 access = 2
-filters = PackedStringArray()
-
-[node name="Restart" type="ConfirmationDialog" parent="Tabs/Development/Content"]
+[node name="Restart" type="ConfirmationDialog" parent="Margin/Body/Development"]
 unique_name_in_owner = true
-title = "Activate development support"
-dialog_text = "Godot reads launch and Game tab settings when the editor opens.\nSave and reopen this editor once to activate them.\nAfter that, Package edits reload in the running World."
+title = "Activate Development World"
+dialog_text = "Save and reopen this editor once so Godot activates its launch settings.\nAfter that, use normal Play (F5). Saved Package edits reload in the running World."
 ok_button_text = "Save and reopen editor"

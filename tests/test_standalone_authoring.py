@@ -47,12 +47,12 @@ class StandaloneAuthoringTests(unittest.TestCase):
 
     def test_registering_model_changes_only_the_manifest(self):
         root = self.initialize(content_only=True)
-        model = root / "models/mini.glb"
+        model = root / "assets/mini.glb"
         model.write_bytes(b"model owned by the author")
         result = entries.register(self.project, "res://" + model.relative_to(self.project).as_posix(),
                                   "my-mini", "My Mini", "miniature")
         declaration = authoring.check_manifest(self.project)["content"][0]["entries"][0]
-        self.assertEqual(declaration["payload"], "models/mini.glb")
+        self.assertEqual(declaration["payload"], "assets/mini.glb")
         self.assertEqual(result["changedPaths"], ["res://rookframe.json"])
         self.assertEqual(model.read_bytes(), b"model owned by the author")
         before = (self.project / "rookframe.json").read_bytes()

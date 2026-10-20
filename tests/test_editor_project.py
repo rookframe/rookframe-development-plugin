@@ -78,6 +78,30 @@ class EditorProjectTests(unittest.TestCase):
         self.assertIs(type(saved["sdk"]["minimumRevision"]), int)
         self.assertEqual(saved["publisherMetadata"]["integer"], 9007199254740993)
 
+    def test_removing_records_preserves_large_metadata_on_retained_identities(self):
+        large = 9007199254740993
+        original = json.loads(self.before)
+        original["content"] = [
+            {"kind": "visual", "entries": [
+                {"id": "a", "publisherMetadata": {"integer": large}},
+                {"id": "b", "publisherMetadata": {"integer": large}}]},
+            {"kind": "system", "targetContractId": "first", "entries": [{"id": "c"}]},
+            {"kind": "system", "targetContractId": "second", "entries": [
+                {"id": "d", "publisherMetadata": {"integer": large}}]}]
+        original["presentations"] = [
+            {"id": "desktop"}, {"id": "phone", "publisherMetadata": {"integer": large}}]
+        self.before = json.dumps(original).encode()
+        self.path.write_bytes(self.before)
+        self.manifest = json.loads(self.before, parse_int=float)
+        self.manifest["content"][0]["entries"].pop(0)
+        self.manifest["content"].pop(1)
+        self.manifest["presentations"].pop(0)
+        execute(self.project, self.request())
+        saved = json.loads(self.path.read_bytes())
+        for record in (saved["content"][0]["entries"][0], saved["content"][1]["entries"][0],
+                       saved["presentations"][0]):
+            self.assertEqual(record["publisherMetadata"]["integer"], large)
+
 
 if __name__ == "__main__":
     unittest.main()

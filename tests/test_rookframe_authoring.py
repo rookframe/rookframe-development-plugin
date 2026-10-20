@@ -48,7 +48,7 @@ class PackageAuthoringTests(unittest.TestCase):
             manifest = json.loads((project / "rookframe.json").read_text())
             root = project / "rookframe/packages" / manifest["id"]
             self.assertFalse((root / "sdk").exists())
-            self.assertEqual('extends Node\n', (root / "logic/implementation.gd").read_text())
+            self.assertTrue((root / "logic/implementation.gd").read_text().startswith('extends Node\n'))
             self.assertIn("rookframe/sdk/**", (project / "export_presets.cfg").read_text())
             self.assertEqual(author.check_manifest(project), manifest)
 

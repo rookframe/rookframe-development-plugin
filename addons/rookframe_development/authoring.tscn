@@ -1,314 +1,333 @@
-[gd_scene load_steps=3 format=3]
-
-[ext_resource type="Script" path="res://addons/rookframe_development/authoring.gd" id="script"]
-
-[ext_resource type="PackedScene" path="res://addons/rookframe_development/package_dialogs.tscn" id="dialogs"]
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://addons/rookframe_development/authoring.gd" id="1"]
 
 [node name="Package" type="VBoxContainer"]
-size_flags_horizontal = 3
-script = ExtResource("script")
+script = ExtResource("1")
 theme_override_constants/separation = 10
 
-[node name="Empty" type="VBoxContainer" parent="."]
-unique_name_in_owner = true
-
-[node name="Welcome" type="Label" parent="Empty"]
-unique_name_in_owner = true
-text = "Rookframe Package"
-autowrap_mode = 3
-
-[node name="WelcomeHelp" type="Label" parent="Empty"]
-unique_name_in_owner = true
-text = "Prepare a home for your content, behavior or game rules. Then work in Godot as usual."
-autowrap_mode = 3
-
-[node name="Create" type="Button" parent="Empty"]
+[node name="Create" type="Button" parent="."]
 unique_name_in_owner = true
 text = "Create Package…"
 
-[node name="PackageBody" type="VBoxContainer" parent="."]
+[node name="PackageHeader" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
-theme_override_constants/separation = 8
-
-[node name="PackageTitle" type="Label" parent="PackageBody"]
+theme_override_constants/separation = 4
+[node name="PackageTitle" type="Label" parent="PackageHeader"]
 unique_name_in_owner = true
 text = "Package"
-autowrap_mode = 3
-
-[node name="PackageRole" type="Label" parent="PackageBody"]
+text_overrun_behavior = 3
+[node name="SettingsMenu" type="MenuButton" parent="PackageHeader"]
 unique_name_in_owner = true
-text = "Content pack"
-autowrap_mode = 3
-
-[node name="PackageActions" type="HBoxContainer" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="Folder" type="Button" parent="PackageBody/PackageActions"]
-unique_name_in_owner = true
-text = "Open folder"
-size_flags_horizontal = 3
-
-[node name="Settings" type="Button" parent="PackageBody/PackageActions"]
-unique_name_in_owner = true
-text = "Details…"
-size_flags_horizontal = 3
-
-[node name="Divider" type="HSeparator" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="ContentTitle" type="Label" parent="PackageBody"]
-unique_name_in_owner = true
-text = "Content"
-autowrap_mode = 3
-
-[node name="Search" type="LineEdit" parent="PackageBody"]
-unique_name_in_owner = true
-placeholder_text = "Find Content by name or path"
-clear_button_enabled = true
-
-[node name="Filter" type="OptionButton" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="Contents" type="Tree" parent="PackageBody"]
-unique_name_in_owner = true
-columns = 2
-hide_root = true
-custom_minimum_size = Vector2(0, 150)
-size_flags_horizontal = 3
-
-[node name="ContentHelp" type="Label" parent="PackageBody"]
-unique_name_in_owner = true
-text = ""
-autowrap_mode = 3
-
-[node name="HiddenSelection" type="Label" parent="PackageBody"]
-unique_name_in_owner = true
-visible = false
-text = "The inspected item is hidden by this filter."
-autowrap_mode = 3
-
-[node name="ClearFilter" type="Button" parent="PackageBody"]
-unique_name_in_owner = true
-visible = false
-text = "Clear filter"
-
-[node name="ContentActions" type="HBoxContainer" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="AddExisting" type="Button" parent="PackageBody/ContentActions"]
-unique_name_in_owner = true
-text = "Select resource…"
-size_flags_horizontal = 3
-
-[node name="OpenContent" type="Button" parent="PackageBody/ContentActions"]
-unique_name_in_owner = true
-text = "Open source"
-size_flags_horizontal = 3
-
-[node name="SourceArea" type="VBoxContainer" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="SourceDivider" type="HSeparator" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-
-[node name="SourceTitle" type="Label" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Behavior and UI"
-autowrap_mode = 3
-
-[node name="SourceHelp" type="Label" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Edit GDScript and Control scenes in Godot. Presentations choose the UI for desktop, tablet or phone."
-autowrap_mode = 3
-
-[node name="Sources" type="Tree" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-hide_root = true
-custom_minimum_size = Vector2(0, 100)
-
-[node name="SourceActions" type="HBoxContainer" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-
-[node name="OpenSource" type="Button" parent="PackageBody/SourceArea/SourceActions"]
-unique_name_in_owner = true
-text = "Open script"
-size_flags_horizontal = 3
-
-[node name="EditPresentation" type="Button" parent="PackageBody/SourceArea/SourceActions"]
-unique_name_in_owner = true
-text = "Edit coverage…"
-size_flags_horizontal = 3
-
-[node name="AddBehavior" type="Button" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Add behavior…"
-
-[node name="AddPresentation" type="Button" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Add Presentation…"
-
-[node name="SystemHelp" type="Label" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Start with Actor data and creation, then author inspection and editing UI. Declare Actor definitions as System Content. Use Actor operations for accepted changes; keep extra Package-wide state in World Data."
-autowrap_mode = 3
-
-[node name="ApiDocs" type="Button" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "API reference ↗"
-
-[node name="ActorDocs" type="Button" parent="PackageBody/SourceArea"]
-unique_name_in_owner = true
-text = "Actor and System data guide ↗"
-
-[node name="LibrariesDivider" type="HSeparator" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="Libraries" type="Button" parent="PackageBody"]
-unique_name_in_owner = true
-text = "Optional libraries"
-toggle_mode = true
+text = "Package settings"
 alignment = 0
 
-[node name="LibraryRows" type="VBoxContainer" parent="PackageBody"]
+[node name="PackageActions" type="HBoxContainer" parent="."]
 unique_name_in_owner = true
-visible = false
-
-[node name="LibraryHelp" type="Label" parent="PackageBody/LibraryRows"]
+[node name="Check" type="Button" parent="PackageActions"]
 unique_name_in_owner = true
-text = "Install each library only when you need it. Downloads preserve your edited files."
-autowrap_mode = 3
-
-[node name="SdkVersion" type="Label" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "SDK: Not installed"
-autowrap_mode = 3
-
-[node name="InstallSdk" type="Button" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "Download latest SDK"
-
-[node name="SdkHelp" type="Label" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "GDScript APIs for Actors, Rooks, Worlds and other Rookframe operations."
-autowrap_mode = 3
-
-[node name="UiVersion" type="Label" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "UI Kit: Not installed"
-autowrap_mode = 3
-
-[node name="InstallUi" type="Button" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "Download latest UI Kit"
-
-[node name="UiHelp" type="Label" parent="PackageBody/LibraryRows"]
-unique_name_in_owner = true
-text = "Reusable Godot Controls for your interfaces. Independent of the SDK."
-autowrap_mode = 3
-
-[node name="SaveDivider" type="HSeparator" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="SaveRow" type="HBoxContainer" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="Dirty" type="Label" parent="PackageBody/SaveRow"]
-unique_name_in_owner = true
-text = "Package saved"
-autowrap_mode = 3
 size_flags_horizontal = 3
-
-[node name="Save" type="Button" parent="PackageBody/SaveRow"]
+text = "Check"
+tooltip_text = "Check saved Package sources with the installed Rookframe application"
+[node name="Build" type="Button" parent="PackageActions"]
 unique_name_in_owner = true
-text = "Save"
-
-[node name="CheckPackage" type="Button" parent="PackageBody"]
-unique_name_in_owner = true
-text = "Check Package"
-
-[node name="BuildRow" type="HBoxContainer" parent="PackageBody"]
-unique_name_in_owner = true
-
-[node name="BuildPackage" type="Button" parent="PackageBody/BuildRow"]
-unique_name_in_owner = true
-text = "Build Package"
 size_flags_horizontal = 3
-
-[node name="Release" type="Button" parent="PackageBody/BuildRow"]
-unique_name_in_owner = true
-text = "Release details…"
-size_flags_horizontal = 3
+text = "Build…"
+tooltip_text = "Build a checked Package archive"
 
 [node name="Conflict" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
 visible = false
-
 [node name="ConflictText" type="Label" parent="Conflict"]
 unique_name_in_owner = true
-text = ""
 autowrap_mode = 3
-
-[node name="CopyDraft" type="Button" parent="."]
+[node name="CopyDraft" type="Button" parent="Conflict"]
 unique_name_in_owner = true
-text = "Copy draft"
-
+text = "Copy unsaved draft"
 [node name="Reload" type="Button" parent="Conflict"]
 unique_name_in_owner = true
-text = "Reload file…"
+text = "Discard draft and reload file"
 
-[node name="Status" type="Label" parent="."]
+[node name="Setup" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
-text = ""
+title = "Create a Rookframe Package"
+ok_button_text = "Create Package"
+[node name="Scroll" type="ScrollContainer" parent="Setup"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Form" type="VBoxContainer" parent="Setup/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+[node name="NameLabel" type="Label" parent="Setup/Scroll/Form"]
+text = "Package name"
+[node name="PackageName" type="LineEdit" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
+placeholder_text = "Name shown to people installing your Package"
+[node name="ContentChoice" type="CheckBox" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
+text = "Content pack"
+[node name="ContentDescription" type="Label" parent="Setup/Scroll/Form"]
+text = "Miniatures, scenery, surface finishes, Themes or System resources.\nAuthor scenes and Resources in Godot. No code is required."
+autowrap_mode = 3
+[node name="ExtensionChoice" type="CheckBox" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
+text = "Extension"
+[node name="ExtensionDescription" type="Label" parent="Setup/Scroll/Form"]
+text = "Add features to an existing World with GDScript and optional UI."
+autowrap_mode = 3
+[node name="SystemChoice" type="CheckBox" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
+text = "System"
+[node name="SystemDescription" type="Label" parent="Setup/Scroll/Form"]
+text = "Define a game's rules, Actors and shared World data with GDScript.\nA World uses one System."
+autowrap_mode = 3
+[node name="StarterUI" type="CheckBox" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
+visible = false
+text = "Include an editable UI window"
+[node name="SetupError" type="Label" parent="Setup/Scroll/Form"]
+unique_name_in_owner = true
 autowrap_mode = 3
 
-[node name="Logs" type="Button" parent="."]
+[node name="Settings" type="ConfirmationDialog" parent="."]
 unique_name_in_owner = true
-text = "Operation details…"
-visible = false
-
-[node name="BuildResult" type="VBoxContainer" parent="."]
+title = "Package settings"
+ok_button_text = "Save"
+[node name="Form" type="VBoxContainer" parent="Settings"]
+theme_override_constants/separation = 10
+[node name="SettingsTabs" type="TabContainer" parent="Settings/Form"]
 unique_name_in_owner = true
-visible = false
-
-[node name="BuildPath" type="Label" parent="BuildResult"]
+size_flags_vertical = 3
+[node name="General" type="ScrollContainer" parent="Settings/Form/SettingsTabs"]
+horizontal_scroll_mode = 0
+[node name="Form" type="VBoxContainer" parent="Settings/Form/SettingsTabs/General"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+[node name="NameLabel" type="Label" parent="Settings/Form/SettingsTabs/General/Form"]
+text = "Name"
+[node name="SettingsName" type="LineEdit" parent="Settings/Form/SettingsTabs/General/Form"]
 unique_name_in_owner = true
-text = ""
+[node name="SummaryLabel" type="Label" parent="Settings/Form/SettingsTabs/General/Form"]
+text = "Summary"
+[node name="Summary" type="TextEdit" parent="Settings/Form/SettingsTabs/General/Form"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 90)
+wrap_mode = 1
+[node name="Compatibility" type="Label" parent="Settings/Form/SettingsTabs/General/Form"]
+text = "Rookframe compatibility"
+[node name="CompatibilityHelp" type="Label" parent="Settings/Form/SettingsTabs/General/Form"]
+text = "Minimum supported application version and the version you have verified."
 autowrap_mode = 3
-
-[node name="ShowBuild" type="Button" parent="BuildResult"]
+[node name="Versions" type="GridContainer" parent="Settings/Form/SettingsTabs/General/Form"]
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+[node name="MinimumLabel" type="Label" parent="Settings/Form/SettingsTabs/General/Form/Versions"]
+text = "Minimum"
+[node name="Minimum" type="LineEdit" parent="Settings/Form/SettingsTabs/General/Form/Versions"]
 unique_name_in_owner = true
-text = "Show archive"
-
-[node name="CopyBuild" type="Button" parent="BuildResult"]
+size_flags_horizontal = 3
+placeholder_text = "0.1.0"
+[node name="VerifiedLabel" type="Label" parent="Settings/Form/SettingsTabs/General/Form/Versions"]
+text = "Verified with"
+[node name="Verified" type="LineEdit" parent="Settings/Form/SettingsTabs/General/Form/Versions"]
 unique_name_in_owner = true
-text = "Copy archive path"
+size_flags_horizontal = 3
+placeholder_text = "0.1.0"
 
-[node name="ContentPicker" type="EditorFileDialog" parent="."]
+[node name="Code & UI" type="ScrollContainer" parent="Settings/Form/SettingsTabs"]
+horizontal_scroll_mode = 0
+[node name="Form" type="VBoxContainer" parent="Settings/Form/SettingsTabs/Code & UI"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+[node name="BehaviorLabel" type="Label" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+text = "Behavior entry script"
+[node name="BehaviorHelp" type="Label" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+text = "Rookframe creates this Node once per World.\nCreate GDScript in logic/ using Godot's FileSystem and assign its entry here. Save or Cancel these settings to return to editing."
+autowrap_mode = 3
+[node name="BehaviorSlot" type="HBoxContainer" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
 unique_name_in_owner = true
-title = "Select Package Resource"
-file_mode = 0
-filters = PackedStringArray("*.tscn,*.tres,*.res,*.scn ; Godot scenes and Resources")
-
-[node name="ConfirmReload" type="ConfirmationDialog" parent="."]
+[node name="MissingBehavior" type="Label" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
 unique_name_in_owner = true
-title = "Reload Package"
-dialog_text = "Discard this Package draft and load rookframe.json from disk? Scene and Resource edits are kept."
-
-[node name="LogDialog" type="AcceptDialog" parent="."]
+autowrap_mode = 3
+[node name="Separator" type="HSeparator" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+[node name="UIHeading" type="Label" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+text = "Device UI"
+[node name="UIHelp" type="Label" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+text = "Each entry extends Control and implements compose_presentation(host). Build its scene normally in Godot.\nA device has one entry. Without a specific entry, phone falls back to tablet, then desktop."
+autowrap_mode = 3
+[node name="Presentations" type="VBoxContainer" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
 unique_name_in_owner = true
-title = "Package operation details"
+theme_override_constants/separation = 12
+[node name="NewUI" type="Button" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+unique_name_in_owner = true
+text = "New UI…"
+[node name="API" type="LinkButton" parent="Settings/Form/SettingsTabs/Code & UI/Form"]
+unique_name_in_owner = true
+text = "Rookframe API reference"
 
-[node name="LogText" type="TextEdit" parent="LogDialog"]
+[node name="Advanced" type="ScrollContainer" parent="Settings/Form/SettingsTabs"]
+horizontal_scroll_mode = 0
+[node name="Form" type="VBoxContainer" parent="Settings/Form/SettingsTabs/Advanced"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+[node name="ApiLabel" type="Label" parent="Settings/Form/SettingsTabs/Advanced/Form"]
+text = "Required application API"
+[node name="ApiHelp" type="Label" parent="Settings/Form/SettingsTabs/Advanced/Form"]
+text = "This declares the API your code uses. It does not install the optional SDK."
+autowrap_mode = 3
+[node name="ApiRow" type="GridContainer" parent="Settings/Form/SettingsTabs/Advanced/Form"]
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+[node name="EditionLabel" type="Label" parent="Settings/Form/SettingsTabs/Advanced/Form/ApiRow"]
+text = "Edition"
+[node name="Edition" type="LineEdit" parent="Settings/Form/SettingsTabs/Advanced/Form/ApiRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+placeholder_text = "Edition"
+[node name="RevisionLabel" type="Label" parent="Settings/Form/SettingsTabs/Advanced/Form/ApiRow"]
+text = "Minimum revision"
+[node name="Revision" type="SpinBox" parent="Settings/Form/SettingsTabs/Advanced/Form/ApiRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+min_value = 1
+max_value = 34
+value = 34
+[node name="IdentityLabel" type="Label" parent="Settings/Form/SettingsTabs/Advanced/Form"]
+text = "Package identity (permanent)"
+[node name="PackageId" type="LineEdit" parent="Settings/Form/SettingsTabs/Advanced/Form"]
 unique_name_in_owner = true
 editable = false
-custom_minimum_size = Vector2(600, 320)
-wrap_mode = 1
-
-[node name="Dialogs" parent="." instance=ExtResource("dialogs")]
+[node name="OpenManifest" type="Button" parent="Settings/Form/SettingsTabs/Advanced/Form"]
 unique_name_in_owner = true
-
-[node name="ProblemSources" type="ItemList" parent="."]
+text = "Locate Manifest in FileSystem"
+[node name="EnableCode" type="Button" parent="Settings/Form/SettingsTabs/Advanced/Form"]
 unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(0, 75)
-tooltip_text = "Double-click a source to open it in Godot."
+text = "Add code or UI to this Package…"
+
+[node name="Missing sources" type="ScrollContainer" parent="Settings/Form/SettingsTabs"]
+horizontal_scroll_mode = 0
+[node name="Repairs" type="VBoxContainer" parent="Settings/Form/SettingsTabs/Missing sources"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+[node name="SettingsError" type="Label" parent="Settings/Form"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="ConfirmAssignments" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Update Package entries"
+ok_button_text = "Save assignments"
+
+[node name="CreateUI" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Create editable UI"
+ok_button_text = "Create"
+[node name="Scroll" type="ScrollContainer" parent="CreateUI"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Form" type="VBoxContainer" parent="CreateUI/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+[node name="Explanation" type="Label" parent="CreateUI/Scroll/Form"]
+text = "Creates ui/<name>.gd and ui/<name>.tscn in your Package.\nEdit the scene with Godot. The script is its Rookframe entry point."
+autowrap_mode = 3
+[node name="UIScriptName" type="LineEdit" parent="CreateUI/Scroll/Form"]
+unique_name_in_owner = true
+placeholder_text = "Script name, e.g. character_sheet"
+[node name="Devices" type="HBoxContainer" parent="CreateUI/Scroll/Form"]
+[node name="UIDesktop" type="CheckBox" parent="CreateUI/Scroll/Form/Devices"]
+unique_name_in_owner = true
+text = "Desktop"
+button_pressed = true
+[node name="UITablet" type="CheckBox" parent="CreateUI/Scroll/Form/Devices"]
+unique_name_in_owner = true
+text = "Tablet"
+[node name="UIPhone" type="CheckBox" parent="CreateUI/Scroll/Form/Devices"]
+unique_name_in_owner = true
+text = "Phone"
+[node name="UIConsequences" type="Label" parent="CreateUI/Scroll/Form"]
+unique_name_in_owner = true
+autowrap_mode = 3
+[node name="UIError" type="Label" parent="CreateUI/Scroll/Form"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="BuildDialog" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Build Package"
+ok_button_text = "Check and build"
+[node name="Scroll" type="ScrollContainer" parent="BuildDialog"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Form" type="VBoxContainer" parent="BuildDialog/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+[node name="Explanation" type="Label" parent="BuildDialog/Scroll/Form"]
+text = "Build a checked archive from your saved Package.\nThe result is written to build/. Existing archives are preserved."
+autowrap_mode = 3
+[node name="VersionLabel" type="Label" parent="BuildDialog/Scroll/Form"]
+text = "Package version"
+[node name="BuildVersion" type="LineEdit" parent="BuildDialog/Scroll/Form"]
+unique_name_in_owner = true
+[node name="BuildError" type="Label" parent="BuildDialog/Scroll/Form"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Libraries" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "Optional authoring libraries"
+[node name="Scroll" type="ScrollContainer" parent="Libraries"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Form" type="VBoxContainer" parent="Libraries/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+[node name="SDKDescription" type="Label" parent="Libraries/Scroll/Form"]
+text = "SDK\nGDScript helpers and code completion for the Rookframe domain API."
+autowrap_mode = 3
+[node name="SDK" type="Button" parent="Libraries/Scroll/Form"]
+unique_name_in_owner = true
+text = "Download latest SDK"
+[node name="UISeparator" type="HSeparator" parent="Libraries/Scroll/Form"]
+[node name="UIKitDescription" type="Label" parent="Libraries/Scroll/Form"]
+text = "UI Kit\nReusable Godot controls for building Package interfaces."
+autowrap_mode = 3
+[node name="UIKit" type="Button" parent="Libraries/Scroll/Form"]
+unique_name_in_owner = true
+text = "Download latest UI Kit"
+[node name="Note" type="Label" parent="Libraries/Scroll/Form"]
+text = "Each download is independent. Packages can run without either local library."
+autowrap_mode = 3
+
+[node name="Guide" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+[node name="Scroll" type="ScrollContainer" parent="Guide"]
+horizontal_scroll_mode = 0
+[node name="GuideText" type="Label" parent="Guide/Scroll"]
+size_flags_horizontal = 3
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Operation" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+title = "Package operation"
+min_size = Vector2i(500, 300)
+size = Vector2i(680, 400)
+[node name="Results" type="RichTextLabel" parent="Operation"]
+unique_name_in_owner = true
+selection_enabled = true
+scroll_following = false
+bbcode_enabled = false
+
+[node name="RepairPicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Locate the authored source"
+file_mode = 0
+access = 0
+filters = PackedStringArray("*.tscn,*.tres,*.res ; Godot scenes and Resources")

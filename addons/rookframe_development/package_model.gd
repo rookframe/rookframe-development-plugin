@@ -222,17 +222,17 @@ func _relocate(value: Dictionary, old_path: String, new_path: String) -> void:
 		value.implementation.entryPoint = _relocated(value.implementation.entryPoint, old_path, new_path)
 
 
-func save(operation := "save", extra: Dictionary = {}) -> bool:
+func save(operation := "save", extra: Dictionary = {}, candidate: Dictionary = {}, label := "") -> bool:
 	if busy:
 		problem.emit("Wait for the Package operation to finish before saving its properties.")
 		return false
 	if not conflict.is_empty():
 		problem.emit(conflict)
 		return false
-	if not dirty() and operation == "save":
+	if not dirty() and operation == "save" and candidate.is_empty():
 		return true
 	var request := extra.duplicate(true)
-	request.merge({"operation": operation, "manifest": manifest, "expected": _disk.sha256_text()}, true)
+	request.merge({"operation": operation, "manifest": manifest if candidate.is_empty() else candidate, "expected": _disk.sha256_text()}, true)
 	var request_path := "res://.godot/rookframe-editor-request.json"
 	DirAccess.make_dir_recursive_absolute("res://.godot")
 	var writer := FileAccess.open(request_path, FileAccess.WRITE)
@@ -254,8 +254,14 @@ func save(operation := "save", extra: Dictionary = {}) -> bool:
 		problem.emit("\n".join(output))
 		return false
 	_disk = FileAccess.get_file_as_string(MANIFEST)
-	manifest = JSON.parse_string(_disk)
-	_baseline = manifest.duplicate(true)
+	var saved_value: Dictionary = JSON.parse_string(_disk)
+	# Source-creating transactions earn an Undo action only after all files commit.
+	# Failure leaves both the draft and its history untouched.
+	if candidate.is_empty():
+		manifest = saved_value
+	else:
+		change(label, saved_value)
+	_baseline = saved_value.duplicate(true)
 	DirAccess.remove_absolute(RECOVERY)
 	changed.emit()
 	var result: Variant = JSON.parse_string("\n".join(output))

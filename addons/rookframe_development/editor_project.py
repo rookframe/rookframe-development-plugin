@@ -9,7 +9,7 @@ from pathlib import Path
 import tempfile
 
 from authoring_paths import project_member
-from rookframe_authoring_scenes import presentation, window_scene
+from rookframe_authoring_scenes import implementation, presentation, window_scene
 
 
 def preserve_numbers(value, original):
@@ -17,7 +17,17 @@ def preserve_numbers(value, original):
     if isinstance(value, dict) and isinstance(original, dict):
         return {key: preserve_numbers(item, original.get(key)) for key, item in value.items()}
     if isinstance(value, list) and isinstance(original, list):
-        return [preserve_numbers(item, original[index] if index < len(original) else None)
+        def matching(item, index):
+            if isinstance(item, dict):
+                if isinstance(item.get("id"), str):
+                    return next((old for old in original if isinstance(old, dict)
+                                 and old.get("id") == item["id"]), None)
+                if item.get("kind") in ("visual", "system") and "entries" in item:
+                    keys = ("kind", "targetSystemPackageId", "targetContractId", "compatibleVersions")
+                    return next((old for old in original if isinstance(old, dict)
+                                 and all(old.get(key) == item.get(key) for key in keys)), None)
+            return original[index] if index < len(original) else None
+        return [preserve_numbers(item, matching(item, index))
                 for index, item in enumerate(value)]
     if type(original) in (int, float) and type(value) in (int, float) and value == original:
         return original
@@ -69,7 +79,7 @@ def execute(project: Path, request: dict) -> dict:
             raise ValueError("This Package already has a behavior entry point.")
         relative = "logic/implementation.gd"
         manifest["implementation"] = {"entryPoint": relative}
-        proposed[project_member(project, f"{root}/{relative}")] = b"extends Node\n"
+        proposed[project_member(project, f"{root}/{relative}")] = implementation(current["kind"]).encode()
     elif operation == "presentation":
         relative = request["entryPoint"]
         if not relative.startswith("ui/") or not relative.endswith(".gd"):

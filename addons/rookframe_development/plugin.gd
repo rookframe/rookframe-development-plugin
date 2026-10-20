@@ -7,7 +7,7 @@ var _importer: EditorImportPlugin
 var _declarations: RefCounted
 var _active := false
 var _package: RefCounted
-var _inspector: EditorInspectorPlugin
+var _content_dock: EditorDock
 var _authoring: Control
 var _launch_manifest: Dictionary = {}
 
@@ -32,9 +32,10 @@ func _enter_tree() -> void:
 	_package = preload("res://addons/rookframe_development/package_model.gd").new()
 	_package.undo = get_undo_redo()
 	_package.reload()
-	_inspector = preload("res://addons/rookframe_development/content_inspector.gd").new()
-	_inspector.model = _package
-	add_inspector_plugin(_inspector)
+	_content_dock = preload("res://addons/rookframe_development/content_dock.tscn").instantiate()
+	_content_dock.model = _package
+	_content_dock.custom_minimum_size.x = 300.0 * EditorInterface.get_editor_scale()
+	add_dock(_content_dock)
 	filesystem.filesystem_changed.connect(_package.reload)
 	var files := EditorInterface.get_file_system_dock()
 	files.files_moved.connect(_package.move_path)
@@ -50,18 +51,18 @@ func _enter_tree() -> void:
 		settings.set_project_metadata("game_view", "make_floating_on_play", false)
 	_dock = preload("res://addons/rookframe_development/development.tscn").instantiate()
 	_dock.custom_minimum_size.x = 300.0 * EditorInterface.get_editor_scale()
-	_development = _dock.get_node("Tabs/Development/Content")
+	_development = _dock.get_node("Margin/Body/Development")
 	_development.configuration_saved.connect(_declarations.queue_update)
-	_dock.get_node("Tabs/Package/Package").package_changed.connect(_declarations.sources_changed)
-	_dock.get_node("Tabs/Package/Package").package_changed.connect(func(_paths: PackedStringArray): _development.refresh_package())
-	_dock.get_node("Tabs/Package/Package").package_changed.connect(_package_saved)
+	_dock.get_node("Margin/Body/Package").package_changed.connect(_declarations.sources_changed)
+	_dock.get_node("Margin/Body/Package").package_changed.connect(func(_paths: PackedStringArray): _development.refresh_package())
+	_dock.get_node("Margin/Body/Package").package_changed.connect(_package_saved)
 	add_dock(_dock)
-	_authoring = _dock.get_node("Tabs/Package/Package")
+	_authoring = _dock.get_node("Margin/Body/Package")
 	_authoring.configure(_package)
-	_dock.get_node("Tabs").current_tab = 0
 	_dock.make_visible.call_deferred()
-	add_tool_menu_item("Rookframe: Package", func(): _dock.make_visible(); _dock.get_node("Tabs").current_tab = 0)
-	add_tool_menu_item("Rookframe: Development World", func(): _dock.make_visible(); _dock.get_node("Tabs").current_tab = 1)
+	add_tool_menu_item("Rookframe: Package settings", _authoring.show_settings)
+	add_tool_menu_item("Rookframe: Authoring guide", _authoring.show_guide)
+	add_tool_menu_item("Rookframe: Development World", _development.show_configuration)
 
 
 func _set_window_layout(_configuration: ConfigFile) -> void:
@@ -75,9 +76,10 @@ func _exit_tree() -> void:
 	if not _active:
 		return
 	_active = false
-	if _inspector != null:
-		remove_inspector_plugin(_inspector)
-		_inspector = null
+	if is_instance_valid(_content_dock):
+		remove_dock(_content_dock)
+		_content_dock.queue_free()
+		_content_dock = null
 	if _package != null:
 		var files := EditorInterface.get_file_system_dock()
 		files.files_moved.disconnect(_package.move_path)
@@ -102,7 +104,8 @@ func _exit_tree() -> void:
 	remove_tool_menu_item("Rookframe: Install latest UI Kit")
 	if is_instance_valid(_dock):
 		remove_tool_menu_item("Rookframe: Development World")
-		remove_tool_menu_item("Rookframe: Package")
+		remove_tool_menu_item("Rookframe: Package settings")
+		remove_tool_menu_item("Rookframe: Authoring guide")
 		remove_dock(_dock)
 		_dock.queue_free()
 
@@ -115,14 +118,13 @@ func _build() -> bool:
 
 func _scene_saved(path: String) -> void:
 	_declarations.sources_changed(PackedStringArray([path]))
-	get_tree().call_group("rookframe_content_editors", "scene_saved", path)
-	if is_instance_valid(_authoring):
-		_authoring.source_changed()
+	get_tree().call_group_flags(SceneTree.GROUP_CALL_DEFERRED, "rookframe_content_properties", "source_saved")
+	_content_dock._queue_refresh()
 
 
 func _source_saved(_resource: Resource) -> void:
-	if is_instance_valid(_authoring):
-		_authoring.source_changed()
+	get_tree().call_group_flags(SceneTree.GROUP_CALL_DEFERRED, "rookframe_content_properties", "source_saved")
+	_content_dock._queue_refresh()
 
 
 func _package_saved(_paths: PackedStringArray) -> void:
@@ -146,21 +148,19 @@ func _build_package() -> void:
 
 
 func _install_library(library: String) -> void:
-	_dock.get_node("Tabs/Package/Package").install_library(library)
+	_authoring.install_library(library)
 	_dock.make_visible()
-	_dock.get_node("Tabs").current_tab = 0
 
 
 func _run(command: String) -> void:
 	_apply_changes()
 	_authoring.run_command(command)
 	_dock.make_visible()
-	_dock.get_node("Tabs").current_tab = 0
 
 
 func _apply_changes() -> void:
 	if is_inside_tree():
-		get_tree().call_group("rookframe_content_editors", "commit_fields")
+		get_tree().call_group("rookframe_content_properties", "commit_fields")
 
 
 func _save_external_data() -> void:

@@ -82,13 +82,9 @@ def project_media(project: Path, manifest: dict) -> dict[str, bytes]:
 
 
 def edit(project: Path, source: Path | None, role: str, caption: str = "",
-         url: str | None = None, remove: str | None = None, move: int = 0,
-         expected: str | None = None) -> dict:
+         url: str | None = None, remove: str | None = None, move: int = 0) -> dict:
     path = project / "rookframe.json"
-    before = path.read_bytes()
-    if expected and hashlib.sha256(before).hexdigest() != expected:
-        raise ValueError("rookframe.json changed outside the editor. Reload it before attaching media.")
-    manifest = json.loads(before)
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     assets(manifest)
     media = manifest.get("media") or {"gallery": []}
     manifest["media"] = media
@@ -143,8 +139,7 @@ def edit(project: Path, source: Path | None, role: str, caption: str = "",
     else:
         raise ValueError("Choose a file to attach or an existing media path to remove/reorder.")
     assets(manifest)
-    if path.read_bytes() != before:
-        raise ValueError("rookframe.json changed while attaching media. Reload it and retry.")
-    from editor_project import replace_file
-    replace_file(path, (json.dumps(manifest, indent=2) + "\n").encode())
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
     return {"status": "media_updated", "media": media, "changedPaths": changed}

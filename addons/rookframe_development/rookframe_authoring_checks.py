@@ -85,14 +85,17 @@ def verify(*arguments: str) -> dict:
     mode, path, *rest = map(str, arguments)
     with tempfile.TemporaryDirectory(prefix="rookframe-check-") as directory:
         report = Path(directory) / "report.json"
-        command = [str(_application), "--headless", "--",
+        # Supported checks finish synchronously during _Ready. Older applications
+        # ignore the command; stock --quit keeps them from running their menu forever.
+        command = [str(_application), "--headless", "--quit", "--",
                    "--package-check=" + mode, "--input=" + str(Path(path).resolve()),
                    "--report=" + str(report)]
         if rest:
             command.append("--profile=" + rest[0])
         process = subprocess.run(command, capture_output=True, text=True, timeout=300)
         if not report.is_file():
-            raise RuntimeError("CHECK.ROOKFRAME: Rookframe did not return a Package check report. Update the installed application. "
+            raise RuntimeError(f"CHECK.ROOKFRAME: {_application} did not return a Package check report. "
+                               "Select a current Rookframe release in Development World configuration or with --rookframe.\n"
                                + process.stdout + process.stderr)
         result = json.loads(report.read_text(encoding="utf-8"))
         if process.returncode or result.get("status") == "rejected":

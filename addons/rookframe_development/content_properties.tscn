@@ -1,0 +1,186 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/rookframe_development/content_properties.gd" id="1"]
+
+[node name="ContentProperties" type="VBoxContainer"]
+script = ExtResource("1")
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="."]
+
+[node name="Section" type="Label" parent="Header"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+text = "Content properties"
+text_overrun_behavior = 3
+tooltip_text = "Package properties for this source"
+
+[node name="Actions" type="MenuButton" parent="Header"]
+unique_name_in_owner = true
+text = "⋮"
+tooltip_text = "Content actions"
+
+[node name="Body" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+theme_override_constants/separation = 6
+
+[node name="Location" type="Label" parent="Body"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Fields" type="GridContainer" parent="Body"]
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+
+[node name="TypeLabel" type="Label" parent="Body/Fields"]
+text = "Use as"
+
+[node name="Type" type="OptionButton" parent="Body/Fields"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+fit_to_longest_item = false
+text = "Choose type…"
+
+[node name="NameLabel" type="Label" parent="Body/Fields"]
+text = "Name"
+
+[node name="Name" type="LineEdit" parent="Body/Fields"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+tooltip_text = "Shown with this Content in the Rookframe Library"
+
+[node name="Help" type="Label" parent="Body"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="System" type="VBoxContainer" parent="Body"]
+unique_name_in_owner = true
+
+[node name="SystemId" type="LineEdit" parent="Body/System"]
+unique_name_in_owner = true
+placeholder_text = "Target System Package UUID"
+
+[node name="Contract" type="LineEdit" parent="Body/System"]
+unique_name_in_owner = true
+placeholder_text = "Contract ID from the System author"
+
+[node name="ResourceType" type="LineEdit" parent="Body/System"]
+unique_name_in_owner = true
+placeholder_text = "Content type from the contract"
+
+[node name="Versions" type="LineEdit" parent="Body/System"]
+unique_name_in_owner = true
+placeholder_text = "Compatible versions, e.g. >=1.0.0 <2.0.0"
+
+[node name="Add" type="Button" parent="Body"]
+unique_name_in_owner = true
+text = "Add to Package"
+
+[node name="Thumbnail" type="VBoxContainer" parent="Body"]
+unique_name_in_owner = true
+theme_override_constants/separation = 6
+
+[node name="ThumbnailLabel" type="Label" parent="Body/Thumbnail"]
+text = "Library thumbnail (optional)"
+
+[node name="ThumbnailHelp" type="Label" parent="Body/Thumbnail"]
+text = "Shown for this item in Rookframe's Library. Choose an image from this Package."
+autowrap_mode = 3
+
+[node name="ThumbnailImage" type="TextureRect" parent="Body/Thumbnail"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 96)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ThumbnailFile" type="Label" parent="Body/Thumbnail"]
+unique_name_in_owner = true
+text = "No image selected"
+text_overrun_behavior = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Body/Thumbnail"]
+
+[node name="ChooseThumbnail" type="Button" parent="Body/Thumbnail/Buttons"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+text = "Choose image…"
+
+[node name="ClearThumbnail" type="Button" parent="Body/Thumbnail/Buttons"]
+unique_name_in_owner = true
+text = "Clear"
+tooltip_text = "Remove the thumbnail assignment. Keep the image file."
+
+[node name="ThumbnailError" type="Label" parent="Body/Thumbnail"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="Prop" type="VBoxContainer" parent="Body"]
+unique_name_in_owner = true
+
+[node name="Switchable" type="CheckBox" parent="Body/Prop"]
+unique_name_in_owner = true
+text = "Switchable light"
+tooltip_text = "Allows the authored Light3D to be switched on and off"
+
+[node name="WallMount" type="CheckBox" parent="Body/Prop"]
+unique_name_in_owner = true
+text = "Mount on walls"
+
+[node name="MountDimensions" type="GridContainer" parent="Body/Prop"]
+unique_name_in_owner = true
+columns = 2
+
+[node name="WidthLabel" type="Label" parent="Body/Prop/MountDimensions"]
+text = "Width (m)"
+[node name="Width" type="SpinBox" parent="Body/Prop/MountDimensions"]
+unique_name_in_owner = true
+min_value = 0.01
+max_value = 100.0
+step = 0.01
+value = 1.0
+[node name="HeightLabel" type="Label" parent="Body/Prop/MountDimensions"]
+text = "Height (m)"
+[node name="Height" type="SpinBox" parent="Body/Prop/MountDimensions"]
+unique_name_in_owner = true
+min_value = 0.01
+max_value = 100.0
+step = 0.01
+value = 1.0
+[node name="DefaultLabel" type="Label" parent="Body/Prop/MountDimensions"]
+text = "Default height (m)"
+[node name="DefaultHeight" type="SpinBox" parent="Body/Prop/MountDimensions"]
+unique_name_in_owner = true
+min_value = 0.01
+max_value = 100.0
+step = 0.01
+value = 1.0
+
+[node name="Appearance" type="HBoxContainer" parent="Body"]
+unique_name_in_owner = true
+[node name="SpanLabel" type="Label" parent="Body/Appearance"]
+text = "Sample width (m)"
+[node name="SampleSpan" type="SpinBox" parent="Body/Appearance"]
+unique_name_in_owner = true
+min_value = 0.05
+max_value = 100.0
+step = 0.05
+value = 1.0
+
+[node name="Error" type="Label" parent="Body"]
+unique_name_in_owner = true
+autowrap_mode = 3
+
+[node name="ThumbnailPicker" type="EditorFileDialog" parent="."]
+unique_name_in_owner = true
+title = "Choose Library thumbnail"
+file_mode = 0
+access = 0
+filters = PackedStringArray("*.png,*.jpg,*.jpeg,*.webp,*.svg;Images")
+
+[node name="RemoveConfirm" type="ConfirmationDialog" parent="."]
+unique_name_in_owner = true
+title = "Remove Content from Package?"
+dialog_text = "The source file stays. Worlds using this Content ID will no longer find it.\nUndo restores the same identity. Adding it again creates a new identity."
+ok_button_text = "Remove declaration"
+dialog_autowrap = true
