@@ -63,23 +63,31 @@ text = "Package name"
 [node name="PackageName" type="LineEdit" parent="Setup/Scroll/Form"]
 unique_name_in_owner = true
 placeholder_text = "Name shown to people installing your Package"
+[node name="StartingPointLabel" type="Label" parent="Setup/Scroll/Form"]
+text = "Choose a starting point"
+[node name="StartingPointDescription" type="Label" parent="Setup/Scroll/Form"]
+text = "Every package can contain content. These options prepare different starting files."
+autowrap_mode = 3
 [node name="ContentChoice" type="CheckBox" parent="Setup/Scroll/Form"]
 unique_name_in_owner = true
 text = "Content pack"
 [node name="ContentDescription" type="Label" parent="Setup/Scroll/Form"]
-text = "Miniatures, scenery, surface finishes, Themes or System resources.\nAuthor scenes and Resources in Godot. No code is required."
+text = "Start with scenes and Resources: miniatures, props, wall styles and more. No code required. You can add behavior and UI later."
 autowrap_mode = 3
 [node name="ExtensionChoice" type="CheckBox" parent="Setup/Scroll/Form"]
 unique_name_in_owner = true
 text = "Extension"
 [node name="ExtensionDescription" type="Label" parent="Setup/Scroll/Form"]
-text = "Add features to an existing World with GDScript and optional UI."
+text = "Start with GDScript behavior that adds features to a World. Your package can also include content and UI."
 autowrap_mode = 3
 [node name="SystemChoice" type="CheckBox" parent="Setup/Scroll/Form"]
 unique_name_in_owner = true
-text = "System"
+text = "Game system"
 [node name="SystemDescription" type="Label" parent="Setup/Scroll/Form"]
-text = "Define a game's rules, Actors and shared World data with GDScript.\nA World uses one System."
+text = "Define a game's rules, Actors and shared data, together with its content and UI. A World uses exactly one game system."
+autowrap_mode = 3
+[node name="PackageRoles" type="Label" parent="Setup/Scroll/Form"]
+text = "Content packs and extensions are optional additions to a World."
 autowrap_mode = 3
 [node name="StarterUI" type="CheckBox" parent="Setup/Scroll/Form"]
 unique_name_in_owner = true
@@ -291,12 +299,20 @@ theme_override_constants/separation = 12
 [node name="SDKDescription" type="Label" parent="Libraries/Scroll/Form"]
 text = "SDK\nGDScript helpers and code completion for the Rookframe domain API."
 autowrap_mode = 3
+[node name="SDKStatus" type="Label" parent="Libraries/Scroll/Form"]
+unique_name_in_owner = true
+text = "Not installed"
+autowrap_mode = 3
 [node name="SDK" type="Button" parent="Libraries/Scroll/Form"]
 unique_name_in_owner = true
 text = "Download latest SDK"
 [node name="UISeparator" type="HSeparator" parent="Libraries/Scroll/Form"]
 [node name="UIKitDescription" type="Label" parent="Libraries/Scroll/Form"]
 text = "UI Kit\nReusable Godot controls for building Package interfaces."
+autowrap_mode = 3
+[node name="UIKitStatus" type="Label" parent="Libraries/Scroll/Form"]
+unique_name_in_owner = true
+text = "Not installed"
 autowrap_mode = 3
 [node name="UIKit" type="Button" parent="Libraries/Scroll/Form"]
 unique_name_in_owner = true

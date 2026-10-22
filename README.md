@@ -13,7 +13,7 @@ without an Editable Package. The first compatible closed-alpha candidate is
 `build-manifest.json`), available through the existing closed-alpha desktop
 distribution. Keep its complete application directory.
 
-Download [the standalone plugin ZIP](https://github.com/rookframe/rookframe-development-plugin/releases/download/v0.3.1-rc.1/rookframe-development-0.3.1-rc.1.zip).
+Download [the standalone plugin ZIP](https://github.com/rookframe/rookframe-development-plugin/releases/download/v0.4.0-dev.3/rookframe-development-0.4.0-dev.3.zip).
 Install it through Godot's **AssetLib → Install from ZIP**,
 then enable **Rookframe Development** in **Project Settings → Plugins**.
 The ZIP contains only `addons/rookframe_development/`. Running a World does not

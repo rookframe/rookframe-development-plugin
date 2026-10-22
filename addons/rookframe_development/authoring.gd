@@ -15,11 +15,12 @@ var _rebuilding := false
 var _pending_settings: Dictionary = {}
 var _repair_id := ""
 var _after_scan := ""
+var _waiting_for_scan := false
 const API := "https://github.com/rookframe/rookframe-sdk/blob/main/API.md"
 
 
 func _ready() -> void:
-	%Create.pressed.connect(func(): %Setup.popup_centered_clamped(Vector2i(580, 540) * EditorInterface.get_editor_scale(), 0.85); %PackageName.grab_focus())
+	%Create.pressed.connect(func(): %Setup.popup_centered_clamped(Vector2i(580, 700) * EditorInterface.get_editor_scale(), 0.85); %PackageName.grab_focus())
 	var group := ButtonGroup.new()
 	for index in range(3):
 		var choice: CheckBox = [%ContentChoice, %ExtensionChoice, %SystemChoice][index]
@@ -76,13 +77,20 @@ func _menu(id: int) -> void:
 
 
 func show_libraries() -> void:
+	_refresh_libraries()
+	%Libraries.popup_centered_clamped(Vector2i(520, 460) * EditorInterface.get_editor_scale(), 0.85)
+
+
+func _refresh_libraries() -> void:
 	var inventory: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://.rookframe/optional-libraries.json")) if FileAccess.file_exists("res://.rookframe/optional-libraries.json") else {}
 	if not inventory is Dictionary: inventory = {}
-	for pair in [["sdk", %SDK], ["ui-kit", %UIKit]]:
+	for pair in [["sdk", %SDK, get_node_or_null("%SDKStatus")], ["ui-kit", %UIKit, get_node_or_null("%UIKitStatus")]]:
 		var installed: String = str(inventory.get(pair[0], {}).get("version", ""))
 		pair[1].text = ("Download latest " if installed.is_empty() else "Update ") + ("SDK" if pair[0] == "sdk" else "UI Kit")
 		pair[1].tooltip_text = "Installed: " + installed if not installed.is_empty() else "Not installed locally"
-	%Libraries.popup_centered_clamped(Vector2i(520, 320) * EditorInterface.get_editor_scale(), 0.85)
+		# Existing dock instances retain their scene until the plugin is reloaded.
+		if pair[2] != null:
+			pair[2].text = "Installed: " + installed if not installed.is_empty() else "Not installed"
 
 
 func configure(package: RefCounted) -> void:
@@ -107,6 +115,8 @@ func refresh() -> void:
 		%Check.disabled = model.busy
 		%Build.disabled = model.busy
 	%SettingsMenu.disabled = model.busy
+	%SDK.disabled = model.busy
+	%UIKit.disabled = model.busy
 
 
 func _create() -> void:
@@ -141,6 +151,7 @@ func show_guide() -> void:
 
 
 func _scanned() -> void:
+	_waiting_for_scan = false
 	if _after_scan.is_empty(): return
 	var path := _after_scan
 	_after_scan = ""
@@ -472,7 +483,7 @@ func install_library(library: String) -> void:
 
 
 func _start(job: String, script: String, arguments: PackedStringArray) -> void:
-	if _worker != null: return
+	if model.busy: return
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
 	if python.is_empty(): python = "python" if OS.get_name() == "Windows" else "python3"
 	var args := PackedStringArray(["-X", "utf8", ProjectSettings.globalize_path("res://addons/rookframe_development/" + script)])
@@ -484,9 +495,11 @@ func _start(job: String, script: String, arguments: PackedStringArray) -> void:
 	model.busy = true
 	refresh()
 	%Operation.title = {"init": "Create Package", "check": "Check Package", "build": "Build Package", "sdk": "Download SDK", "ui-kit": "Download UI Kit"}[job]
-	%Results.text = "Working…"
+	%Results.text = "Waiting for Godot to finish importing…"
 	_place_operation()
 	%Operation.popup_centered_clamped(Vector2i(680, 400) * EditorInterface.get_editor_scale(), 0.85)
+	await _wait_for_imports()
+	%Results.text = {"sdk": "Downloading SDK…", "ui-kit": "Downloading UI Kit…"}.get(job, "Working…")
 	_worker = Thread.new()
 	var started := _worker.start(func():
 		var output: Array = []
@@ -502,8 +515,12 @@ func _process(_delta: float) -> void:
 	if _worker == null or _worker.is_alive(): return
 	var result: Dictionary = _worker.wait_to_finish()
 	_worker = null
-	model.busy = false
 	print(result.output)
+	if result.code == 0:
+		%Results.text = "Download finished. Importing files into Godot…" if _job in ["sdk", "ui-kit"] else "Updating the Godot FileSystem…"
+		await _refresh_filesystem()
+	model.busy = false
+	_refresh_libraries()
 	%Results.clear()
 	%Results.append_text(("Completed.\n\n" if result.code == 0 else "Needs attention.\n\n"))
 	# Native editor links are actionable without a second resource browser.
@@ -523,10 +540,27 @@ func _process(_delta: float) -> void:
 			%Setup.hide()
 			%Operation.hide()
 			_after_scan = model.root_path() + ("content/" if _kind == 0 else "logic/implementation.gd")
+			_scanned()
 			show_guide()
 			package_changed.emit(PackedStringArray(["res://rookframe.json"]))
-		EditorInterface.get_resource_filesystem().scan()
 	refresh()
+
+
+func _wait_for_imports() -> void:
+	var filesystem := EditorInterface.get_resource_filesystem()
+	while filesystem.is_importing() or filesystem.is_scanning():
+		await get_tree().create_timer(0.1).timeout
+
+
+func _refresh_filesystem() -> void:
+	# Import progress pumps _process(). A scan here can otherwise replace the
+	# filesystem while native import workers are still using its directories.
+	await _wait_for_imports()
+	_waiting_for_scan = true
+	EditorInterface.get_resource_filesystem().scan()
+	while _waiting_for_scan:
+		await get_tree().create_timer(0.1).timeout
+	await _wait_for_imports()
 
 
 func _problem(message: String) -> void:
