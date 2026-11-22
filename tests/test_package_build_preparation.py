@@ -4,11 +4,15 @@ import importlib.util
 from pathlib import Path
 import shutil
 import os
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "addons/rookframe_development"))
+import rookframe_package_data as package_data
+
 SPEC = importlib.util.spec_from_file_location(
     "package_build", ROOT / "addons/rookframe_development/rookframe_package_build.py"
 )
@@ -17,6 +21,7 @@ SPEC.loader.exec_module(BUILD)
 GODOT = Path(os.environ.get("ROOKFRAME_GODOT", "/Applications/Godot_mono.app/Contents/MacOS/Godot"))
 PACKAGE_ID = "22222222-2222-4222-8222-222222222222"
 BUILD_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+ENGINE = "4.7.2.stable.mono.official.ed1daf0bf"
 
 
 class PackageBuildPreparationTests(unittest.TestCase):
@@ -36,9 +41,9 @@ class PackageBuildPreparationTests(unittest.TestCase):
                 + '/icon.svg"\n[params]' + parameters
             )
             before = BUILD.source_identity(source)
-            with patch.object(BUILD, "allocate_uids", return_value={}):
-                project, runtime = BUILD.prepare_profile(
-                    GODOT, source, Path(temporary) / "prepared", PACKAGE_ID, BUILD_ID, "package"
+            with patch.object(BUILD, "allocate_uids", return_value={}), patch.object(package_data, "compile_data"):
+                project, runtime, _ = BUILD.prepare_profile(
+                    GODOT, source, Path(temporary) / "prepared", PACKAGE_ID, BUILD_ID, "package", engine=ENGINE
                 )
             self.assertEqual(script, (project / runtime[6:] / "example.gd").read_bytes())
             self.assertFalse((project / "rookframe_ui_kit_provenance.json").exists())
@@ -60,7 +65,7 @@ class PackageBuildPreparationTests(unittest.TestCase):
             (root / "helper.gd").write_text(
                 "extends RefCounted\nclass_name ExampleHelper\n"
             )
-            with patch.object(BUILD, "allocate_uids", return_value={}):
+            with patch.object(BUILD, "allocate_uids", return_value={}), patch.object(package_data, "compile_data"):
                 BUILD.prepare_profile(
                     GODOT,
                     source,
@@ -68,6 +73,7 @@ class PackageBuildPreparationTests(unittest.TestCase):
                     PACKAGE_ID,
                     BUILD_ID,
                     "desktop",
+                    engine=ENGINE,
                 )
             (root / "entry.gd").write_text("extends Node\nvar helper: ExampleHelper\n")
             with patch.object(BUILD, "allocate_uids", return_value={}):
@@ -81,6 +87,7 @@ class PackageBuildPreparationTests(unittest.TestCase):
                         PACKAGE_ID,
                         BUILD_ID,
                         "desktop",
+                        engine=ENGINE,
                     )
 
     @unittest.skipUnless(
@@ -115,13 +122,14 @@ func _init():
                 '[node name="Piece" type="Node"]\nmetadata/data = ExtResource("1")\n'
             )
             before = BUILD.source_identity(source)
-            project, runtime = BUILD.prepare_profile(
+            project, runtime, _ = BUILD.prepare_profile(
                 GODOT,
                 source,
                 Path(temporary) / "stage",
                 PACKAGE_ID,
                 BUILD_ID,
                 "desktop",
+                engine=ENGINE,
             )
             prepared = project / runtime[6:]
             self.assertNotIn(

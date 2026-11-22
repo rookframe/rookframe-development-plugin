@@ -95,7 +95,7 @@ def verify(*arguments: str) -> dict:
             raise RuntimeError("CHECK.ROOKFRAME: Rookframe did not return a Package check report. Update the installed application. "
                                + process.stdout + process.stderr)
         result = json.loads(report.read_text(encoding="utf-8"))
-        if process.returncode or result.get("status") == "rejected":
+        if process.returncode or not isinstance(result, dict) or result.get("status") != mode + "_checked":
             raise RuntimeError("CHECK.PRODUCTION: " + json.dumps(result))
         return result
 

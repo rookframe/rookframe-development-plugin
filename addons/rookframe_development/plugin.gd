@@ -69,7 +69,12 @@ func _exit_tree() -> void:
 
 
 func _build() -> bool:
-	return not is_instance_valid(_development) or _development.can_run()
+	return not is_instance_valid(_development) or (_development.can_run() and _declarations.can_run())
+
+
+func _process(_delta: float) -> void:
+	if _declarations != null:
+		_declarations.poll()
 
 
 func _scene_saved(path: String) -> void:

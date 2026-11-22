@@ -182,7 +182,7 @@ class PackageAuthoringTests(unittest.TestCase):
             manifest = {"id": "aae579da-5392-4507-8eaa-0d918af58076"}
             with patch.object(author, "source_identity", return_value="source"), \
                  patch.object(author.subprocess, "check_output", return_value="4.7.2"), \
-                 patch.object(author, "prepare_profile", return_value=(project, "res://build/")), \
+                 patch.object(author, "prepare_profile", return_value=(project, "res://build/", None)), \
                  patch.object(author, "export_prepared_profile", side_effect=RuntimeError("resource export failed")):
                 with self.assertRaisesRegex(RuntimeError, "resource export"):
                     author.build_project(project, project, project / "work", manifest,

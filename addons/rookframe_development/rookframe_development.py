@@ -1,7 +1,7 @@
 """Prepare an author's own Godot project to run the installed Rookframe application.
 
 The editor owns watching, importing, debugging, live editing and the Game tab.
-This module only locates the ordinary application and copies its published libraries into Godot's cache.
+Prepare its ordinary application libraries and the selected Editable Package's data.
 """
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ import platform
 import shutil
 import subprocess
 import tempfile
+
+from rookframe_package_data import prepare_development_data
 
 CONFIG_SCHEMA = "rookframe-development-v1"
 NATIVE_ROOT = "dependencies/webrtc_native/lib/"
@@ -68,7 +70,8 @@ def atomic_copy(source: Path, destination: Path) -> None:
         pending.unlink(missing_ok=True)
 
 
-def prepare(project: Path, application: Path, godot_version: str, architecture: str) -> dict:
+def prepare(project: Path, application: Path, godot_version: str, architecture: str,
+            godot: Path) -> dict:
     project = project.resolve()
     config_path = project / ".rookframe/development.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -127,6 +130,9 @@ def prepare(project: Path, application: Path, godot_version: str, architecture: 
     targets = {relative for _, relative in inputs}
     obsolete = [member(project, name) for name in previous.get("files", [])
                 if name not in targets and name.startswith((MANAGED_ROOT, NATIVE_ROOT))]
+    package_data = {}
+    if config.get("developPackage") is not None:
+        package_data = prepare_development_data(project, godot, version, config["developPackage"])
     # Only derived libraries are copied. The installed application's PCK is used
     # directly; there is no second application export or development bundle.
     ownership.write_text(json.dumps({"application": str(application), "files": sorted(
@@ -138,7 +144,7 @@ def prepare(project: Path, application: Path, godot_version: str, architecture: 
         path.unlink(missing_ok=True)
     ownership.write_text(json.dumps({"application": str(application), "files": sorted(targets)}, indent=2) + "\n", encoding="utf-8")
     return {"status": "ready", "engine": version, "application": str(application),
-            "runArguments": run_arguments(packs[0])}
+            "runArguments": run_arguments(packs[0]), **package_data}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -150,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         version = subprocess.check_output([str(args.godot), "--version"], text=True).strip()
-        print(json.dumps(prepare(args.project, args.rookframe, version, args.architecture)))
+        print(json.dumps(prepare(args.project, args.rookframe, version, args.architecture, args.godot)))
         return 0
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         print(str(error))

@@ -18,6 +18,7 @@ from rookframe_authoring_checks import configured_profiles, configure_applicatio
 from rookframe_package_build import (BUILD_SCHEMA,
     copy_author_project, deterministic_archive, export_prepared_profile, new_build_id, normalize_binary_resources,
     prepare_profile, run_godot, shared_profile_sources, source_identity)
+from rookframe_package_data import encoding
 
 from authoring_paths import project_member
 
@@ -233,36 +234,58 @@ def build_project(project: Path, godot: Path, work: Path, manifest: dict,
         raise AuthoringError(f"BUILD.OUTPUT_EXISTS: Choose a new output path; {output} already contains an earlier build.")
     package_id = manifest["id"]
     build_id = new_build_id()
+    engine = subprocess.check_output([str(godot), "--version"], text=True, timeout=30).strip()
     metadata = {"schema": BUILD_SCHEMA, "packageId": package_id, "buildId": build_id,
-                "sourceSha256": source_identity(project),
-                "engine": subprocess.check_output([str(godot), "--version"], text=True).strip(), "profiles": {}}
+                "sourceSha256": source_identity(project), "data": encoding(),
+                "engine": engine, "profiles": {}}
     pcks = {}
+    sizes = {}
     for profile in profiles:
         profile_work = work / profile
-        prepared, runtime_root = prepare_profile(godot, project, profile_work, package_id, build_id, profile)
+        prepared, runtime_root, data = prepare_profile(
+            godot, project, profile_work, package_id, build_id, profile, engine=engine)
         pcks[profile], metadata["profiles"][profile] = export_prepared_profile(
-            godot, prepared, profile_work, profile, runtime_root, headless=headless)
+            godot, prepared, profile_work, profile, runtime_root, data, headless=headless)
+        sizes[profile] = data.sizes()
     staged = work / "candidate.rookpackage"
     from rookframe_media import project_media
     staged.write_bytes(deterministic_archive(
         (project / "rookframe.json").read_bytes(), pcks,
         shared_profile_sources(pcks, metadata), metadata, project_media(project, manifest)))
-    checked = verify("artifact", staged)
-    check_revision(manifest, checked)
+    archive_size = staged.stat().st_size
+    try:
+        checked = verify("artifact", staged)
+        if checked.get("status") != "artifact_checked":
+            raise AuthoringError("CHECK.PRODUCTION: " + json.dumps(checked))
+        check_revision(manifest, checked)
+    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
+        candidate = output.with_name(f"{output.stem}-{build_id}.rookpackage.unapproved")
+        publish_archive(staged, candidate)
+        raise AuthoringError(
+            f"BUILD.UNAPPROVED: {BUILD_SCHEMA}, {metadata['data']['format']}, "
+            f"compiler {metadata['data']['compilerVersion']}. Candidate: {candidate}\n"
+            f"Compressed archive: {archive_size} bytes. Data: {json.dumps(sizes)}\n"
+            f"{error}"
+        ) from error
+    publish_archive(staged, output)
+    return {"status": "built", "archive": str(output), "buildId": build_id,
+            "profiles": profiles, "verification": checked, "archiveBytes": archive_size, "data": sizes}
+
+
+def publish_archive(staged: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    # Publish only the fully checked set, atomically even across filesystems.
+    # Publish atomically across filesystems and never replace an earlier build.
     with tempfile.NamedTemporaryFile(dir=output.parent, prefix=".rookframe-", delete=False) as stream:
         pending = Path(stream.name)
         try:
-            stream.write(staged.read_bytes())
+            with staged.open("rb") as source:
+                shutil.copyfileobj(source, stream)
             stream.flush()
             os.fsync(stream.fileno())
             stream.close()
             os.link(pending, output)  # Atomic publication; never replace an existing build.
         finally:
             pending.unlink(missing_ok=True)
-    return {"status": "built", "archive": str(output), "buildId": build_id,
-            "profiles": profiles, "verification": checked}
 
 
 def main() -> int:

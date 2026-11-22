@@ -16,11 +16,15 @@ import re
 import shutil
 import struct
 import subprocess
+from typing import TYPE_CHECKING
 import uuid
+
+if TYPE_CHECKING:
+    from rookframe_package_data import Compilation
 
 
 BUILD_METADATA = "artifacts/build.json"
-BUILD_SCHEMA = "rookframe-package-build-v1"
+BUILD_SCHEMA = "rookframe-package-build-v2"
 AUTHOR_STATE = {".godot", "__pycache__", ".git", "build", "bin", "obj", ".plugged",
                 ".rookframe-development", ".rookframe-development.pck", "rookframe_ui_kit_provenance.json"}
 DEVELOPMENT_CONFIG = {"development.json", "installed-application.json"}
@@ -190,14 +194,20 @@ def prepare_profile(
     package_id: str,
     build_id: str,
     profile: str,
-) -> tuple[Path, str]:
+    *,
+    engine: str,
+) -> tuple[Path, str, Compilation]:
     """Leave all Publisher inputs untouched, including import parameters."""
+    from rookframe_package_data import (INDEX_PATH, PAYLOAD_DIRECTORY, compile_data, package_root,
+                                       relocate_reference, runtime_sources)
+
     uuid_value = uuid.UUID(build_id)
     if uuid_value.version != 4 or str(uuid_value) != build_id:
         raise RuntimeError("A new export requires a canonical build UUIDv4")
     source_root = f"res://rookframe/packages/{package_id}/"
     runtime_root = f"res://rookframe/package-artifacts/{build_id}/{profile}/"
     project = destination / "project"
+    runtime_sources(package_root(source, package_id))
     copy_author_project(source, project)
     old_root = project / source_root.removeprefix("res://")
     # A precise preparation failure is preferable to silently exporting binary
@@ -231,7 +241,19 @@ def prepare_profile(
     new_root.parent.mkdir(parents=True)
     old_root.rename(new_root)
     validate_global_class_references(new_root)
-    return project, runtime_root
+    sources = runtime_sources(new_root)
+    presets = project / "export_presets.cfg"
+    export = {"path": presets.as_posix(), "profile": profile,
+              "patterns": [runtime_root[6:] + INDEX_PATH,
+                           runtime_root[6:] + PAYLOAD_DIRECTORY + "/*.rfdata"]} if presets.is_file() else None
+    data = compile_data(godot, engine, sources, new_root,
+                        lambda value: relocate_reference(value, source_root, runtime_root, replacements),
+                        export=export)
+    for path in sources.values():
+        path.unlink()
+        for suffix in (".import", ".remap", ".uid"):
+            path.with_name(path.name + suffix).unlink(missing_ok=True)
+    return project, runtime_root, data
 
 
 def validate_global_class_references(root: Path) -> None:
@@ -462,6 +484,21 @@ def pck_paths(pck: bytes) -> tuple[str, ...]:
     return tuple(pck_members(pck))
 
 
+def verify_exported_data(members: dict[str, bytes], project: Path, runtime_root: str,
+                         entries: dict[str, str]) -> None:
+    from rookframe_package_data import INDEX_PATH
+
+    pack_root = runtime_root.removeprefix("res://")
+    for relative in [INDEX_PATH, *entries.values()]:
+        path = pack_root + relative
+        if members.get(path) != (project / path).read_bytes():
+            raise RuntimeError(f"BUILD.DATA: Export omitted or changed {path}. Include Package data in the Godot export preset.")
+    for relative in entries:
+        path = pack_root + relative
+        if any(path + suffix in members for suffix in ("", ".import", ".remap", ".uid")):
+            raise RuntimeError(f"BUILD.DATA: Export retained converted source {path}.")
+
+
 def shared_profile_sources(pcks: dict[str, bytes], metadata: dict) -> dict[str, bytes]:
     """Compare actual exported textual code at its stable author identity."""
     source_root = "res://rookframe/packages/" + metadata["packageId"] + "/"
@@ -523,7 +560,9 @@ def godot_export_command(
 
 
 
-def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str, runtime_root: str, *, headless: bool = True) -> tuple[bytes, dict]:
+def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str,
+                            runtime_root: str, data: Compilation, *,
+                            headless: bool = True) -> tuple[bytes, dict]:
     # Keep native text resources inspectable in finished Packages. Imported
     # assets still use the selected profile's native Godot importer/output.
     with (project / "project.godot").open("a") as config:
@@ -550,14 +589,15 @@ def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str
     if not output.is_file() or output.stat().st_size == 0:
         raise RuntimeError(f"Godot did not produce {output}")
     pck = strip_global_mappings(output.read_bytes())
-    paths = pck_paths(pck)
+    members = pck_members(pck)
+    verify_exported_data(members, project, runtime_root, data.entries)
     root = project / runtime_root.removeprefix("res://")
     uids = {
         uid: path
         for uid, path in declared_uids(project, root).items()
-        if path[6:] in paths
-        or path[6:] + ".remap" in paths
-        or path[6:] + ".import" in paths
+        if path[6:] in members
+        or path[6:] + ".remap" in members
+        or path[6:] + ".import" in members
     }
     return pck, {
         "root": runtime_root,

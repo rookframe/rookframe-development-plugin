@@ -27,7 +27,8 @@ class InstalledApplicationTests(unittest.TestCase):
         (self.application / self.native).write_bytes(b"ordinary native extension")
         self.engine = "4.7.2.stable.mono.official.ed1daf0bf"
         for patcher in [patch.object(development, "host_platform", return_value="windows"),
-                        patch.object(development.subprocess, "check_output", return_value=self.engine)]:
+                        patch.object(development.subprocess, "check_output", return_value=self.engine),
+                        patch.object(development, "prepare_development_data", return_value={})]:
             patcher.start()
             self.addCleanup(patcher.stop)
         (self.project / "rookframe.json").write_text(json.dumps({"id": "author", "kind": "system-extension"}))
@@ -36,7 +37,7 @@ class InstalledApplicationTests(unittest.TestCase):
         (self.project / "my_scene.tscn").write_text("Author scene")
 
     def prepare(self):
-        return development.prepare(self.project, self.executable, self.engine, "x86_64")
+        return development.prepare(self.project, self.executable, self.engine, "x86_64", Path("godot"))
 
     def published_world(self):
         config = {"schema": development.CONFIG_SCHEMA, "worldName": "My World",
@@ -96,9 +97,9 @@ class InstalledApplicationTests(unittest.TestCase):
 
     def test_requires_matching_stock_mono_editor_and_architecture(self):
         with self.assertRaisesRegex(ValueError, "ENGINE"):
-            development.prepare(self.project, self.executable, "another-engine", "x86_64")
+            development.prepare(self.project, self.executable, "another-engine", "x86_64", Path("godot"))
         with self.assertRaisesRegex(ValueError, "architecture"):
-            development.prepare(self.project, self.executable, self.engine, "arm64")
+            development.prepare(self.project, self.executable, self.engine, "arm64", Path("godot"))
         self.assertFalse((self.project / ".godot").exists())
 
     def test_upgrade_removes_only_obsolete_owned_libraries(self):

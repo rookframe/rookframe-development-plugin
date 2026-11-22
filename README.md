@@ -80,6 +80,16 @@ registration. The Media controls use the plugin's publication commands. See [pub
 **Build Package** produces its archive. These commands use the installed
 application as the verifier; the plugin contains no second SDK or admission checker.
 
+Keep runtime data in readable JSON in the Package resource namespace. Build
+Package uses stock Godot to compile it to individual Variant files and an index
+in the exported PCK. The Package Manifest, authentication and service
+declarations, and build metadata retain their text contracts. Keep licenses,
+provenance and authoring inputs in their own directories.
+
+The installed checker must support `rookframe-package-build-v2` to approve the
+build. A rejected archive is kept with the `.rookpackage.unapproved` suffix.
+The build diagnostic gives its path and the checker's reason.
+
 ## Run a Development World
 
 1. Open the author project in the stock Godot .NET editor matching the installed
@@ -106,6 +116,9 @@ Keep `.rookframe/development.json`, `.rookframe/installed-application.json`,
 `.rookframe-development/`, `rookframe/development/`,
 `.godot/` and staged `dependencies/webrtc_native/lib/` files outside source control.
 Preparing again repairs a deleted Godot cache.
+For the selected Editable Package, preparation and editor source changes compile
+data into `.rookframe-development/package-data/`. The native declarations
+resource carries the selected Package's generated index to the application.
 
 ## Work on this plugin
 
