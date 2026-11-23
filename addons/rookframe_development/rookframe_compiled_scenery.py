@@ -71,7 +71,7 @@ def jobs(manifest: dict, files: dict[str, tuple], profile: str) -> list[dict]:
             if not isinstance(local_id, str) or not local_id or ":" in local_id or any(
                     unicodedata.category(char) in {"Cc", "Cs"} for char in local_id):
                 raise ValueError(f"SCENERY.REFERENCE: {profile}: invalid Content ID {local_id!r}")
-            if not isinstance(path, str) or path not in files:
+            if not isinstance(path, str) or not any(path + suffix in files for suffix in ("", ".remap")):
                 raise ValueError(f"SCENERY.REFERENCE: {profile}: {local_id}: missing exact payload {path!r}")
             if local_id in seen:
                 raise ValueError(f"SCENERY.REFERENCE: {profile}: duplicate Content ID {local_id}")

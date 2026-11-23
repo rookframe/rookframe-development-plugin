@@ -144,6 +144,12 @@ class EditableSceneryPublicationTests(unittest.TestCase):
             scenery.verify_export({}, root, compiled)
         scenery.verify_export({root[6:] + "content/source.res.remap": b"native source remap"}, root, compiled)
 
+    def test_scenery_payload_can_use_a_normalized_native_path(self):
+        manifest = {"id": PACKAGE, "content": [{"entries": [
+            {"id": "art", "type": "wall_style", "payload": "content/wall.glb"}]}]}
+        files = {"content/wall.glb.remap": (0, 0, 0)}
+        self.assertEqual(scenery.jobs(manifest, files, "package")[0]["path"], "content/wall.glb")
+
     def use_vegetation(self):
         (self.source / "grass.tres").write_text("authored vegetation source")
         self.manifest.write_text(json.dumps({"id": PACKAGE, "content": [{"entries": [
