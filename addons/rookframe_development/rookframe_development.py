@@ -15,17 +15,19 @@ import shutil
 import subprocess
 import tempfile
 
-from rookframe_package_data import prepare_development_data
+from rookframe_editable_preparation import (
+    APPLICATION_SCENE, DEVELOPMENT_ARGUMENT, RENDERERS, prepare_editable_package,
+)
 
 CONFIG_SCHEMA = "rookframe-development-v1"
 NATIVE_ROOT = "dependencies/webrtc_native/lib/"
 MANAGED_ROOT = ".godot/mono/temp/bin/Debug/"
 
 
-def run_arguments(pack: Path) -> str:
+def run_arguments(pack: Path, renderer: str | None = None) -> str:
+    rendering = f" --rendering-method {renderer}" if renderer else ""
     return ("--main-pack " + json.dumps(pack.as_posix(), ensure_ascii=False)
-            + " --scene res://rookframe/application/ApplicationRoot.tscn"
-              " -- --development=res://.rookframe/development.json")
+            + f" --scene {APPLICATION_SCENE}{rendering} -- {DEVELOPMENT_ARGUMENT}")
 
 
 def digest(path: Path) -> str:
@@ -71,7 +73,7 @@ def atomic_copy(source: Path, destination: Path) -> None:
 
 
 def prepare(project: Path, application: Path, godot_version: str, architecture: str,
-            godot: Path) -> dict:
+            godot: Path, renderer: str | None = None) -> dict:
     project = project.resolve()
     config_path = project / ".rookframe/development.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -130,9 +132,6 @@ def prepare(project: Path, application: Path, godot_version: str, architecture: 
     targets = {relative for _, relative in inputs}
     obsolete = [member(project, name) for name in previous.get("files", [])
                 if name not in targets and name.startswith((MANAGED_ROOT, NATIVE_ROOT))]
-    package_data = {}
-    if config.get("developPackage") is not None:
-        package_data = prepare_development_data(project, godot, version, config["developPackage"])
     # Only derived libraries are copied. The installed application's PCK is used
     # directly; there is no second application export or development bundle.
     ownership.write_text(json.dumps({"application": str(application), "files": sorted(
@@ -143,8 +142,15 @@ def prepare(project: Path, application: Path, godot_version: str, architecture: 
     for path in obsolete:
         path.unlink(missing_ok=True)
     ownership.write_text(json.dumps({"application": str(application), "files": sorted(targets)}, indent=2) + "\n", encoding="utf-8")
+    editable = prepare_editable_package(project, godot, version, config.get("developPackage"),
+                                        application=application, renderer=renderer, force_lods=True)
+    if "dataError" in editable:
+        raise ValueError(editable["dataError"])
+    lods = editable.get("lodPreparation", {})
+    if lods.get("status") == "failed":
+        raise ValueError(lods.get("diagnostic") or "Rookframe could not prepare Editable Package LODs.")
     return {"status": "ready", "engine": version, "application": str(application),
-            "runArguments": run_arguments(packs[0]), **package_data}
+            "runArguments": run_arguments(packs[0], renderer), **editable}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -153,10 +159,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rookframe", type=Path, required=True)
     parser.add_argument("--godot", type=Path, required=True)
     parser.add_argument("--architecture", required=True, help="Engine.get_architecture_name() from the author editor")
+    parser.add_argument("--renderer", choices=RENDERERS)
     args = parser.parse_args(argv)
     try:
         version = subprocess.check_output([str(args.godot), "--version"], text=True).strip()
-        print(json.dumps(prepare(args.project, args.rookframe, version, args.architecture, args.godot)))
+        print(json.dumps(prepare(args.project, args.rookframe, version, args.architecture, args.godot,
+                                 args.renderer)))
         return 0
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
         print(str(error))

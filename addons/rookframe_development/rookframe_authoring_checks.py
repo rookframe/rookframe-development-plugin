@@ -51,6 +51,10 @@ def configured_profiles(project: Path) -> list[str]:
 _application: Path | None = None
 
 
+def configured_application() -> Path | None:
+    return _application
+
+
 def configure_application(project: Path, explicit: Path | None = None) -> None:
     global _application
     config_path = project / ".rookframe/development.json"

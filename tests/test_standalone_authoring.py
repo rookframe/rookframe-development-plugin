@@ -36,6 +36,7 @@ class StandaloneAuthoringTests(unittest.TestCase):
                 authoring.initialize(project, "Package", kind, ui=ui, content_only=content_only)
                 manifest = authoring.check_manifest(project)
                 self.assertEqual(manifest["kind"], kind)
+                self.assertEqual(manifest["sdk"], {"edition": "2029", "minimumRevision": 37})
                 for suffix in (".gd", ".tscn", ".tres"):
                     for source in project.rglob("*" + suffix):
                         text = source.read_text(encoding="utf-8")

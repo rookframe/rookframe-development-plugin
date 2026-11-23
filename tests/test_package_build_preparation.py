@@ -111,9 +111,20 @@ func _init():
     resource.set_meta("marker", "Binary author data")
     ResourceSaver.save(resource, "%sdata.res")
     ResourceSaver.set_uid("%sdata.res", ResourceUID.text_to_id("uid://babcdefghijk"))
+    var artwork := Node3D.new()
+    artwork.name = "Artwork"
+    var lod := MeshInstance3D.new()
+    lod.name = "LOD0"
+    lod.mesh = BoxMesh.new()
+    artwork.add_child(lod)
+    lod.owner = artwork
+    var scene := PackedScene.new()
+    scene.pack(artwork)
+    ResourceSaver.save(scene, "%sartwork.res")
+    artwork.free()
     quit()
 """
-                % (author_root, author_root)
+                % (author_root, author_root, author_root)
             )
             BUILD.run_godot(GODOT, source, "--script", "res://seed.gd")
             (root / "piece.tscn").write_text(
@@ -139,6 +150,8 @@ func _init():
                 runtime + "data.tres", (prepared / "data.res.remap").read_text()
             )
             self.assertIn("Binary author data", (prepared / "data.tres").read_text())
+            self.assertIn(runtime + "artwork.tscn", (prepared / "artwork.res.remap").read_text())
+            self.assertIn('name="LOD0"', (prepared / "artwork.tscn").read_text())
             self.assertEqual(before, BUILD.source_identity(source))
 
     def test_reference_preparation_preserves_nonreference_text_and_escaped_literals(

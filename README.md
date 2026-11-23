@@ -86,6 +86,12 @@ in the exported PCK. The Package Manifest, authentication and service
 declarations, and build metadata retain their text contracts. Keep licenses,
 provenance and authoring inputs in their own directories.
 
+For scenery, Build Package retains authored mesh and scene references and packs
+compatible static geometry, including its authored LOD arrays. Native artwork
+preserves authored LOD hierarchies, shadow meshes and custom vertex channels.
+The profile records the scenery index digest separately from gameplay data.
+Rookframe generates missing visual and shadow LODs during client installation.
+
 The installed checker must support `rookframe-package-build-v2` to approve the
 build. A rejected archive is kept with the `.rookpackage.unapproved` suffix.
 The build diagnostic gives its path and the checker's reason.
@@ -119,6 +125,11 @@ Preparing again repairs a deleted Godot cache.
 For the selected Editable Package, preparation and editor source changes compile
 data into `.rookframe-development/package-data/`. The native declarations
 resource carries the selected Package's generated index to the application.
+Scenery members live under `.rookframe-development/compiled-scenery/`. After
+publishing the authored scenery index, Save and Prepare and artwork refresh ask
+the installed Rookframe application to prepare Editable LODs with the World’s
+renderer. The plugin accepts the application report only for the matching source
+generation. A reported source fallback keeps the original artwork usable.
 
 ## Work on this plugin
 

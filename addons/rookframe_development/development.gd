@@ -105,7 +105,6 @@ func _prepare() -> void:
 		return
 	file.store_string(JSON.stringify(config, "\t") + "\n")
 	file.close()
-	configuration_saved.emit()
 	%Status.text = "Preparing the project with your installed Rookframe…"
 	_set_preparing(true)
 	var python := OS.get_environment("ROOKFRAME_PYTHON")
@@ -116,6 +115,9 @@ func _prepare() -> void:
 		ProjectSettings.globalize_path("res://addons/rookframe_development/rookframe_development.py"),
 		"--project", ProjectSettings.globalize_path("res://"), "--rookframe", config.rookframe,
 		"--godot", OS.get_executable_path(), "--architecture", Engine.get_architecture_name()])
+	var renderer := RenderingServer.get_current_rendering_method()
+	if renderer in ["mobile", "forward_plus", "gl_compatibility"]:
+		args.append_array(PackedStringArray(["--renderer", renderer]))
 	var worker := Thread.new()
 	var started := worker.start(func():
 		var output: Array = []
@@ -158,12 +160,17 @@ func _process(_delta: float) -> void:
 	if saved != OK:
 		%Status.text = "Cannot save project launch settings: " + error_string(saved)
 		return
+	configuration_saved.emit()
 	if _initial_args != run_args or not _initial_embedding:
 		%Status.text = "Project prepared. Reopen this editor once to activate Godot's launch and Game tab settings."
 		%Restart.popup_centered()
 		return
 	_prepared = true
-	%Status.text = "Ready • local development only\nRun the World. Godot's Debugger shows errors."
+	var lods: Dictionary = prepared.get("lodPreparation", {})
+	if lods.get("status") == "source_fallback":
+		%Status.text = "Ready for local development. Rookframe will use original artwork where LOD preparation was incomplete."
+	else:
+		%Status.text = "Ready • local development only\nRun the World. Godot's Debugger shows errors."
 	print(result.output)
 
 

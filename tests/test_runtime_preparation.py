@@ -28,7 +28,7 @@ class InstalledApplicationTests(unittest.TestCase):
         self.engine = "4.7.2.stable.mono.official.ed1daf0bf"
         for patcher in [patch.object(development, "host_platform", return_value="windows"),
                         patch.object(development.subprocess, "check_output", return_value=self.engine),
-                        patch.object(development, "prepare_development_data", return_value={})]:
+                        patch.object(development, "prepare_editable_package", return_value={})]:
             patcher.start()
             self.addCleanup(patcher.stop)
         (self.project / "rookframe.json").write_text(json.dumps({"id": "author", "kind": "system-extension"}))

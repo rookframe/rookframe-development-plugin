@@ -49,9 +49,11 @@ TOKENS = re.compile(
 )
 
 
-def run_godot(godot: Path, project: Path, *arguments: str) -> str:
+def run_godot(godot: Path, project: Path, *arguments: str, headless: bool = True) -> str:
+    display = ["--headless"] if headless else [
+        "--disable-render-loop", "--resolution", "1x1", "--position", "-10000,-10000"]
     result = subprocess.run(
-        [str(godot), "--headless", "--path", str(project), *arguments],
+        [str(godot), *display, "--path", str(project), *arguments],
         capture_output=True,
         text=True,
         timeout=120,
@@ -289,43 +291,54 @@ def normalize_binary_resources(godot: Path, project: Path, root: Path) -> None:
     semantic path. The converted dependency graph then participates in the same
     path/UID preparation as ordinary text resources.
     """
-    paths = sorted(p for p in root.rglob("*") if p.suffix in {".res", ".scn", ".glb", ".gltf"})
-    if not paths:
+    scene_formats = {".glb", ".gltf", ".fbx", ".dae", ".blend"}
+    normalized_formats = {".res", ".scn", ".glb", ".gltf"}
+    candidates = sorted(p for p in root.rglob("*") if p.is_file() and p.suffix.lower()
+                        in scene_formats | normalized_formats)
+    if not candidates:
         return
-    run_godot(godot, project, "--editor", "--import")
-    mapping = {
-        "res://"
-        + p.relative_to(project).as_posix(): "res://"
-        + p.with_suffix(".tres" if p.suffix == ".res" else ".tscn")
-        .relative_to(project)
-        .as_posix()
-        for p in paths
-    }
-    for old, new in mapping.items():
-        if (project / new[6:]).exists():
-            raise RuntimeError(f"{old}: binary normalization collides with {new}")
-    (project / "normalize-input.json").write_text(json.dumps(mapping))
+    paths = [path for path in candidates if path.suffix.lower() in normalized_formats]
+    resource_paths = ["res://" + path.relative_to(project).as_posix() for path in paths]
+    scene_imports = ["res://" + path.relative_to(project).as_posix() + ".import"
+                     for path in candidates if path.suffix.lower() in scene_formats]
+    request = project / "normalize-input.json"
+    request.write_text(json.dumps({"paths": resource_paths, "sceneImports": scene_imports}))
+    mapping_path = project / "normalize-mapping.json"
     script = project / "normalize-author.gd"
     script.write_text(
         """extends SceneTree
 func _init():
-    var paths = JSON.parse_string(FileAccess.get_file_as_string("res://normalize-input.json"))
+    var request = JSON.parse_string(FileAccess.get_file_as_string("res://normalize-input.json"))
+    if OS.get_cmdline_user_args().has("--configure-imports"):
+        for path in request.sceneImports:
+            if not _configure_import(path):
+                quit(1)
+                return
+        quit()
+        return
+    var paths := {}
+    var targets := {}
     var resources = {}
     var uids = {}
-    for path in paths:
+    for path: String in request.paths:
         uids[path] = ResourceLoader.get_resource_uid(path)
         var resource = ResourceLoader.load(path)
         if resource == null:
             push_error("Cannot normalize " + path)
             quit(1)
             return
-        if path.get_extension() in ["glb", "gltf"]:
-            _prepare_imported_meshes(resource, {})
+        var target := path.get_basename() + (".tscn" if resource is PackedScene else ".tres")
+        if FileAccess.file_exists(target) or targets.has(target):
+            push_error(path + ": binary normalization collides with " + target)
+            quit(1)
+            return
+        paths[path] = target
+        targets[target] = true
         resources[path] = resource
     for path in resources:
         resources[path].take_over_path(paths[path])
     for path in resources:
-        var flags = ResourceSaver.FLAG_BUNDLE_RESOURCES if path.get_extension() in ["glb", "gltf"] else 0
+        var flags = ResourceSaver.FLAG_BUNDLE_RESOURCES if path.get_extension().to_lower() in ["glb", "gltf"] else 0
         if ResourceSaver.save(resources[path], paths[path], flags) != OK:
             push_error("Cannot save normalized " + path)
             quit(1)
@@ -334,42 +347,56 @@ func _init():
             push_error("Cannot preserve binary resource UID for " + path)
             quit(1)
             return
+    var output := FileAccess.open("res://normalize-mapping.json", FileAccess.WRITE)
+    if output == null or not output.store_string(JSON.stringify(paths)):
+        push_error("Cannot record normalized resource paths")
+        quit(1)
+        return
+    output.close()
     quit()
 
-func _prepare_imported_meshes(value, visited: Dictionary) -> void:
-    if value is Resource:
-        var id: int = value.get_instance_id()
-        if visited.has(id):
-            return
-        visited[id] = true
-        # The imported shadow mesh is an optional rendering optimization.
-        # Use the original mesh for normal Godot shadows in the prepared copy.
-        if value is ArrayMesh:
-            value.shadow_mesh = null
-        if value is PackedScene:
-            var state: SceneState = value.get_state()
-            for node in state.get_node_count():
-                for property in state.get_node_property_count(node):
-                    _prepare_imported_meshes(state.get_node_property_value(node, property), visited)
-        for property in value.get_property_list():
-            if property.usage & PROPERTY_USAGE_STORAGE:
-                _prepare_imported_meshes(value.get(property.name), visited)
-    elif value is Array:
-        for item in value:
-            _prepare_imported_meshes(item, visited)
-    elif value is Dictionary:
-        for item in value.values():
-            _prepare_imported_meshes(item, visited)
+func _configure_import(path: String) -> bool:
+    var config := ConfigFile.new()
+    if FileAccess.file_exists(path):
+        var error := config.load(path)
+        if error != OK:
+            push_error("SCENERY.REFERENCE: Cannot read import settings " + path)
+            return false
+        # A deliberately skipped scene is still governed by the author's settings.
+        if config.get_value("remap", "importer", "scene") != "scene":
+            return true
+    else:
+        config.set_value("remap", "importer", "scene")
+        config.set_value("remap", "type", "PackedScene")
+    config.set_value("params", "meshes/generate_lods", false)
+    config.set_value("params", "meshes/create_shadow_meshes", false)
+    var subresources: Dictionary = config.get_value("params", "_subresources", {})
+    for mesh: Dictionary in subresources.get("meshes", {}).values():
+        # Godot's per-mesh enum uses 2 for Disable and overrides the scene default.
+        mesh["generate/lods"] = 2
+        mesh["generate/shadow_meshes"] = 2
+    config.set_value("params", "_subresources", subresources)
+    if config.save(path) != OK:
+        push_error("SCENERY.REFERENCE: Cannot update disposable import settings " + path)
+        return false
+    return true
 """
     )
-    run_godot(godot, project, "--script", "res://normalize-author.gd")
+    if scene_imports:
+        run_godot(godot, project, "--script", "res://normalize-author.gd", "--", "--configure-imports")
+    mapping = {}
+    if paths:
+        run_godot(godot, project, "--editor", "--import")
+        run_godot(godot, project, "--script", "res://normalize-author.gd")
+        mapping = json.loads(mapping_path.read_bytes())
+        mapping_path.unlink()
     for old, new in mapping.items():
         path = project / old[6:]
         path.unlink()
         Path(str(path) + ".import").unlink(missing_ok=True)
         Path(str(path) + ".remap").write_text('[remap]\npath="' + new + '"\n')
     script.unlink()
-    (project / "normalize-input.json").unlink()
+    request.unlink()
     cache = project / ".godot"
     if not cache.resolve().is_relative_to(project.resolve()):
         raise RuntimeError("Disposable import cache escaped the prepared project.")
@@ -563,6 +590,9 @@ def godot_export_command(
 def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str,
                             runtime_root: str, data: Compilation, *,
                             headless: bool = True) -> tuple[bytes, dict]:
+    from rookframe_authoring_checks import configured_application
+    from rookframe_compiled_scenery import application_pack, compile_scenery, verify_export
+
     # Keep native text resources inspectable in finished Packages. Imported
     # assets still use the selected profile's native Godot importer/output.
     with (project / "project.godot").open("a") as config:
@@ -574,6 +604,16 @@ def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str
         config.write("\n[editor]\nexport/convert_text_resources_to_binary=false\n")
     run_godot(godot, project, "--editor", "--import")
     validate_global_class_references(project / runtime_root.removeprefix("res://"))
+    root = project / runtime_root.removeprefix("res://")
+    manifest = json.loads((project / "rookframe.json").read_bytes())
+    build_id = root.parent.name
+    engine = subprocess.check_output([str(godot), "--version"], text=True, timeout=30).strip()
+    scenery = compile_scenery(godot, engine, project, root, root, manifest, build_id, profile,
+                              settings=("texture import: " + ",".join(compressions)).encode(), export=True,
+                              application_pack=application_pack(configured_application()))
+    (work / "scenery-report.json").write_text(json.dumps(
+        {"counts": scenery.counts, "fallbacks": scenery.fallbacks,
+         "vegetationSources": scenery.vegetation_sources}, indent=2), encoding="utf-8")
     output = work / "profile.pck"
     result = subprocess.run(
         godot_export_command(godot, project, profile, output, headless=headless),
@@ -591,7 +631,7 @@ def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str
     pck = strip_global_mappings(output.read_bytes())
     members = pck_members(pck)
     verify_exported_data(members, project, runtime_root, data.entries)
-    root = project / runtime_root.removeprefix("res://")
+    verify_export(members, runtime_root, scenery)
     uids = {
         uid: path
         for uid, path in declared_uids(project, root).items()
@@ -603,4 +643,5 @@ def export_prepared_profile(godot: Path, project: Path, work: Path, profile: str
         "root": runtime_root,
         "pckSha256": hashlib.sha256(pck).hexdigest(),
         "uids": uids,
+        **({"compiledScenery": scenery.declaration} if scenery.declaration else {}),
     }

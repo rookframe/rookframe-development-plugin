@@ -23,7 +23,7 @@ from rookframe_package_data import encoding
 from authoring_paths import project_member
 
 SDK_EDITION = "2029"
-SDK_EDITIONS = {"2029": 34}
+SDK_EDITIONS = {SDK_EDITION: 37}
 RESOURCE_EXPORT = "package"
 
 
@@ -33,7 +33,9 @@ class AuthoringError(RuntimeError):
 
 def check_edition(edition: str, revision: int) -> None:
     if type(revision) is not int or not 1 <= revision <= SDK_EDITIONS.get(edition, 0):
-        raise AuthoringError("SDK.REVISION: Choose a supported application API Edition and minimum revision (2029, 1–34). The optional SDK library does not need to be installed.")
+        supported = ", ".join(f"{name}, 1–{maximum}" for name, maximum in SDK_EDITIONS.items())
+        raise AuthoringError(f"SDK.REVISION: Choose a supported application API Edition and minimum revision "
+                             f"({supported}). The optional SDK library does not need to be installed.")
 
 
 def json_text(value: object) -> str:
@@ -240,6 +242,7 @@ def build_project(project: Path, godot: Path, work: Path, manifest: dict,
                 "engine": engine, "profiles": {}}
     pcks = {}
     sizes = {}
+    scenery = {}
     for profile in profiles:
         profile_work = work / profile
         prepared, runtime_root, data = prepare_profile(
@@ -247,6 +250,9 @@ def build_project(project: Path, godot: Path, work: Path, manifest: dict,
         pcks[profile], metadata["profiles"][profile] = export_prepared_profile(
             godot, prepared, profile_work, profile, runtime_root, data, headless=headless)
         sizes[profile] = data.sizes()
+        report = profile_work / "scenery-report.json"
+        if report.is_file():
+            scenery[profile] = json.loads(report.read_bytes())
     staged = work / "candidate.rookpackage"
     from rookframe_media import project_media
     staged.write_bytes(deterministic_archive(
@@ -265,11 +271,13 @@ def build_project(project: Path, godot: Path, work: Path, manifest: dict,
             f"BUILD.UNAPPROVED: {BUILD_SCHEMA}, {metadata['data']['format']}, "
             f"compiler {metadata['data']['compilerVersion']}. Candidate: {candidate}\n"
             f"Compressed archive: {archive_size} bytes. Data: {json.dumps(sizes)}\n"
+            f"Compiled scenery: {json.dumps(scenery)}\n"
             f"{error}"
         ) from error
     publish_archive(staged, output)
     return {"status": "built", "archive": str(output), "buildId": build_id,
-            "profiles": profiles, "verification": checked, "archiveBytes": archive_size, "data": sizes}
+            "profiles": profiles, "verification": checked, "archiveBytes": archive_size, "data": sizes,
+            **({"compiledScenery": scenery} if scenery else {})}
 
 
 def publish_archive(staged: Path, output: Path) -> None:
